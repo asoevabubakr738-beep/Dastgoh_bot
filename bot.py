@@ -3,7 +3,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters, ConversationHandler
 
 TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_IDS = [123456789]
+ADMIN_IDS = [9228348493]
 
 CHOOSE, PHOTO, NAME, PRICE = range(4)
 
