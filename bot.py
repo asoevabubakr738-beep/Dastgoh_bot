@@ -1,8 +1,7 @@
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
-
-TOKEN = os.getenv("9228348493:AAHh3KArLvSDS9GN46LadDe4V2cgFQTaC0k")
+TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "9282246667"))  
 WHATSAPP = "783829009" 
 # Молҳо: ном, сомонӣ, юан, доллар
