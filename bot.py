@@ -9,7 +9,7 @@ ADMIN_IDS = [9228348493]
 
 CHOOSE, PHOTO, NAME, PRICE = range(4)
 
-# Барои Render Web Service - сомонаи қалбакӣ, то бот хомӯш нашавад
+# Барои Render Web Service
 def keep_alive():
     class H(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -72,7 +72,10 @@ async def start(update, context):
 async def contact(update, context):
     q = update.callback_query
     await q.answer()
-    await q.edit_message_text("📞 Барои фармоиш: @asoevabubakr\n\n⬅️ Барои бозгашт /start -ро пахш кун", reply_markup=main_kb(q.from_user.id in ADMIN_IDS))
+    await q.edit_message_text(
+        "📞 Барои фармоиш: @asoevabubakr\n\n⬅️ Барои бозгашт /start -ро пахш кун",
+        reply_markup=main_kb(q.from_user.id in ADMIN_IDS)
+    )
 
 # ---------- КАТАЛОГ ----------
 
@@ -80,4 +83,13 @@ async def catalog(update, context):
     q = update.callback_query
     await q.answer()
     if not products:
-        await q.edit_message_text("Ҳоло
+        await q.edit_message_text(
+            "Ҳоло маҳсулот нест. 😔",
+            reply_markup=main_kb(q.from_user.id in ADMIN_IDS)
+        )
+        return
+    kb = []
+    for pid, p in products.items():
+        kb.append([InlineKeyboardButton(f"{p['name']} - {p['price']} с.", callback_data=f"view_{pid}")])
+    kb.append([InlineKeyboardButton("⬅️ Бозгашт", callback_data="back")])
+    await q.edit_message_text("🛍 Каталог:", reply_markup=InlineKeyboardMarkup(kb))
