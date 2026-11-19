@@ -1,258 +1,200 @@
-import os, json
-import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, ConversationHandler, filters
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+import os
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_IDS = [9228348493]
+TOKEN = os.getenv("9228348493:AAHh3KArLvSDS9GN46LadDe4V2cgFQTaC0k")
+ADMIN_ID = int(os.getenv("ADMIN_ID", "9282246667"))  
+WHATSAPP = "783829009" 
+# Молҳо: ном, сомонӣ, юан, доллар
+PRODUCTS = {
+    "apple_case": [
+        ("Чехол iPhone 15", 120, 85, 11),
+        ("Чехол iPhone 16", 140, 100, 13),
+        ("Чехол iPhone 14", 100, 70, 9),
+    ],
+    "samsung_case": [
+        ("Чехол Samsung S24", 110, 78, 10),
+        ("Чехол Samsung A55", 90, 64, 8),
+    ],
+    "xiaomi_case": [
+        ("Чехол Xiaomi 14", 95, 67, 9),
+        ("Чехол Redmi Note 13", 80, 57, 7),
+    ],
+    "laptop": [
+        ("Ноутбук Lenovo IdeaPad", 5500, 3900, 500),
+        ("Ноутбук HP Pavilion", 6200, 4400, 565),
+    ],
+    "kitchen": [
+        ("Блендер Xiaomi", 350, 250, 32),
+        ("Чойник электрикӣ", 280, 200, 25),
+    ],
+    "car": [
+        ("Видеорегистратор 4K", 650, 460, 59),
+        ("Зарядник мошин 65W", 180, 128, 16),
+    ],
+}
 
-CHOOSE, PHOTO, NAME, PRICE = range(4)
+BRANDS = {
+    "apple": "🍎 Apple",
+    "samsung": "📱 Samsung",
+    "xiaomi": "📱 Xiaomi",
+    "huawei": "📱 Huawei",
+    "honor": "📱 Honor",
+}
 
-# Барои Render Web Service
-def keep_alive():
-    class H(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"Bot is alive")
-        def log_message(self, *a):
-            pass
-    port = int(os.environ.get("PORT", 10000))
-    HTTPServer(("0.0.0.0", port), H).serve_forever()
-
-threading.Thread(target=keep_alive, daemon=True).start()
-
-try:
-    with open("products.json", "r", encoding="utf-8") as f:
-        products = json.load(f)
-except:
-    products = {}
-
-def save():
-    with open("products.json", "w", encoding="utf-8") as f:
-        json.dump(products, f, ensure_ascii=False, indent=2)
-
-# ---------- КЛАВИАТУРАҲО ----------
-
-def main_kb(is_admin=False):
-    kb = [
-        [InlineKeyboardButton("🛍 Каталог", callback_data="catalog")],
-        [InlineKeyboardButton("📞 Алоқа", callback_data="contact")],
-    ]
-    if is_admin:
-        kb.append([InlineKeyboardButton("⚙️ Панели админ", callback_data="admin")])
-    return InlineKeyboardMarkup(kb)
-
-def admin_kb():
+def main_menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("➕ Иловаи маҳсулот", callback_data="add")],
-        [InlineKeyboardButton("🗑 Нест кардани маҳсулот", callback_data="delete_list")],
-        [InlineKeyboardButton("⬅️ Бозгашт", callback_data="back")]
+        [InlineKeyboardButton("📱 Телефон ва лавозимоти он", callback_data="cat_phone")],
+        [InlineKeyboardButton("💻 Компютер, ноутбук ва таҷҳизоти он", callback_data="cat_comp")],
+        [InlineKeyboardButton("🏠 Барои хона ва ошхона", callback_data="cat_home")],
+        [InlineKeyboardButton("🚗 Маҳсулот барои мошин", callback_data="cat_car")],
+        [InlineKeyboardButton("✍️ Заказ аз админ", callback_data="cat_admin")],
+        [InlineKeyboardButton("🛒 Сабади ман", callback_data="cart")],
     ])
 
-def categories_kb():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Дастгоҳҳо", callback_data="cat_Дастгоҳҳо")],
-        [InlineKeyboardButton("Дигар", callback_data="cat_Дигар")],
-        [InlineKeyboardButton("❌ Бекор кардан", callback_data="cancel")]
-    ])
+def back_btn():
+    return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Бозгашт", callback_data="back")]])
 
-# ---------- /start ----------
-
-async def start(update, context):
-    user_id = update.effective_user.id
-    is_admin = user_id in ADMIN_IDS
-    text = "Салом! 👋\nБа боти Дастгоҳ хуш омадед.\nМаҳсулотро интихоб кун:"
-    if update.message:
-        await update.message.reply_text(text, reply_markup=main_kb(is_admin))
-    else:
-        await update.callback_query.edit_message_text(text, reply_markup=main_kb(is_admin))
-
-async def contact(update, context):
-    q = update.callback_query
-    await q.answer()
-    await q.edit_message_text(
-        "📞 Барои фармоиш: @asoevabubakr\n\n⬅️ Барои бозгашт /start -ро пахш кун",
-        reply_markup=main_kb(q.from_user.id in ADMIN_IDS)
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["cart"] = []
+    await update.message.reply_text(
+        "Салом! 👋\nМағозаи техника ва таҷҳизоти электронӣ аз Чин 🇨🇳\nНархҳо аз худи завод, бе восита.\n\nКатегорияро интихоб кун:",
+        reply_markup=main_menu()
     )
 
-# ---------- КАТАЛОГ ----------
-
-async def catalog(update, context):
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-    if not products:
-        await q.edit_message_text(
-            "Ҳоло маҳсулот нест. 😔",
-            reply_markup=main_kb(q.from_user.id in ADMIN_IDS)
-        )
-        return
-    kb = []
-    for pid, p in products.items():
-        kb.append([InlineKeyboardButton(f"{p['name']} - {p['price']} с.", callback_data=f"view_{pid}")])
-    kb.append([InlineKeyboardButton("⬅️ Бозгашт", callback_data="back")])
-    await q.edit_message_text("🛍 Каталог:", reply_markup=InlineKeyboardMarkup(kb))
-# ---------- ДИДАНИ МАҲСУЛОТ ----------
+    data = q.data
 
-async def view_product(update, context):
-    q = update.callback_query
-    await q.answer()
-    pid = q.data.replace("view_", "")
-    p = products.get(pid)
-    if not p:
-        await q.edit_message_text(
-            "Маҳсулот ёфт нашуд.",
-            reply_markup=main_kb(q.from_user.id in ADMIN_IDS)
-        )
+    if data == "back":
+        await q.edit_message_text("Категорияро интихоб кун:", reply_markup=main_menu())
         return
-    kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🛒 Фармоиш додан", callback_data=f"order_{pid}")],
-        [InlineKeyboardButton("⬅️ Бозгашт", callback_data="catalog")]
-    ])
-    caption = f"📦 {p['name']}\n💰 Нарх: {p['price']} с.\n📂 Категория: {p.get('category','-')}"
-    if p.get("photo"):
-        try:
-            await q.message.reply_photo(photo=p["photo"], caption=caption, reply_markup=kb)
-            await q.message.delete()
+
+    if data == "cat_phone":
+        kb = [[InlineKeyboardButton(v, callback_data=f"brand_{k}")] for k, v in BRANDS.items()]
+        kb.append([InlineKeyboardButton("⬅️ Бозгашт", callback_data="back")])
+        await q.edit_message_text("Маркаро интихоб кун:", reply_markup=InlineKeyboardMarkup(kb))
+        return
+
+    if data.startswith("brand_"):
+        brand = data.replace("brand_", "")
+        key = f"{brand}_case" if f"{brand}_case" in PRODUCTS else "apple_case"
+        kb = []
+        for i, (name, s, y, d) in enumerate(PRODUCTS.get(key, [])):
+            kb.append([InlineKeyboardButton(f"{name} - {s} с.", callback_data=f"prod_{key}_{i}")])
+        kb.append([InlineKeyboardButton("⬅️ Бозгашт", callback_data="cat_phone")])
+        await q.edit_message_text(f"{BRANDS.get(brand,'')} - Чехолҳо:", reply_markup=InlineKeyboardMarkup(kb))
+        return
+
+    if data == "cat_comp":
+        kb = [[InlineKeyboardButton("💻 Ноутбукҳо", callback_data="show_laptop")],
+              [InlineKeyboardButton("⬅️ Бозгашт", callback_data="back")]]
+        await q.edit_message_text("Компютер, ноутбук - интихоб кун:", reply_markup=InlineKeyboardMarkup(kb))
+        return
+
+    if data == "cat_home":
+        kb = [[InlineKeyboardButton("🍳 Техникаи ошхона", callback_data="show_kitchen")],
+              [InlineKeyboardButton("⬅️ Бозгашт", callback_data="back")]]
+        await q.edit_message_text("Барои хона ва ошхона:", reply_markup=InlineKeyboardMarkup(kb))
+        return
+
+    if data == "cat_car":
+        kb = [[InlineKeyboardButton("🚗 Барои мошин", callback_data="show_car")],
+              [InlineKeyboardButton("⬅️ Бозгашт", callback_data="back")]]
+        await q.edit_message_text("Маҳсулот барои мошин:", reply_markup=InlineKeyboardMarkup(kb))
+        return
+
+    if data in ["show_laptop", "show_kitchen", "show_car"]:
+        key = {"show_laptop":"laptop","show_kitchen":"kitchen","show_car":"car"}[data]
+        kb = []
+        for i, (name, s, y, d) in enumerate(PRODUCTS[key]):
+            kb.append([InlineKeyboardButton(f"{name} - {s} с.", callback_data=f"prod_{key}_{i}")])
+        kb.append([InlineKeyboardButton("⬅️ Бозгашт", callback_data="back")])
+        await q.edit_message_text("Молро интихоб кун:", reply_markup=InlineKeyboardMarkup(kb))
+        return
+
+    if data.startswith("prod_"):
+        _, key, idx = data.split("_")
+        name, s, y, d = PRODUCTS[key][int(idx)]
+        context.user_data["last_prod"] = (name, s)
+        kb = [[InlineKeyboardButton("🛒 Ба сабад илова кун", callback_data=f"add_{key}_{idx}")],
+              [InlineKeyboardButton("⬅️ Бозгашт", callback_data="back")]]
+        await q.edit_message_text(
+            f"📦 {name}\n\n💰 Нарх:\n🇹🇯 {s} сомонӣ\n🇨🇳 {y} юан\n🇺🇸 {d} доллар",
+            reply_markup=InlineKeyboardMarkup(kb))
+        return
+
+    if data.startswith("add_"):
+        _, key, idx = data.split("_")
+        name, s, y, d = PRODUCTS[key][int(idx)]
+        cart = context.user_data.get("cart", [])
+        cart.append((name, s))
+        context.user_data["cart"] = cart
+        await q.edit_message_text(f"✅ {name} ба сабад илова шуд!\n\nКатегорияро интихоб кун:", reply_markup=main_menu())
+        return
+
+    if data == "cart":
+        cart = context.user_data.get("cart", [])
+        if not cart:
+            await q.edit_message_text("🛒 Сабади шумо холӣ аст.", reply_markup=back_btn())
             return
-        except:
-            pass
-    await q.edit_message_text(caption, reply_markup=kb)
-
-async def order(update, context):
-    q = update.callback_query
-    await q.answer()
-    pid = q.data.replace("order_", "")
-    p = products.get(pid)
-    if not p:
+        total = sum(x[1] for x in cart)
+        text = "🛒 Сабади шумо:\n\n" + "\n".join([f"- {n} - {p} с." for n, p in cart]) + f"\n\n💰 Ҷамъ: {total} сомонӣ\n\nНом ва рақами телефонатонро нависед:"
+        context.user_data["await_order"] = True
+        await q.edit_message_text(text, reply_markup=back_btn())
         return
-    await q.edit_message_text(
-        f"✅ Шумо '{p['name']}' -ро интихоб кардед.\n\nБарои фармоиш ба @asoevabubakr нависед.",
-        reply_markup=main_kb(q.from_user.id in ADMIN_IDS)
-    )
 
-# ---------- АДМИН ----------
-
-async def admin_panel(update, context):
-    q = update.callback_query
-    await q.answer()
-    if q.from_user.id not in ADMIN_IDS:
-        await q.edit_message_text("Ту админ нестӣ. ⛔")
+    if data == "cat_admin":
+        await q.edit_message_text(
+            "✍️ Заказ аз админ\n\nАгар моле, ки мехоҳӣ дар мағоза нест, акс ё силкаи онро аз Taobao / Pinduoduo ҳамин ҷо равон кун, админ нархашро мегӯяд.\n\nАкс ё силкаро равон кун:",
+            reply_markup=back_btn())
+        context.user_data["await_custom"] = True
         return
-    await q.edit_message_text("⚙️ Панели админ:", reply_markup=admin_kb())
 
-async def delete_list(update, context):
-    q = update.callback_query
-    await q.answer()
-    if not products:
-        await q.edit_message_text("Маҳсулот нест.", reply_markup=admin_kb())
+    if data.startswith("accept_"):
+        user_id = int(data.split("_")[1])
+        await context.bot.send_message(user_id, "✅ Фармоиши шумо қабул шуд!\nМо ба зудӣ бо шумо тамос мегирем. Раҳмат! 🙏")
+        await q.edit_message_text("✅ Қабул шуд, ба муштарӣ хабар рафт.")
         return
-    kb = []
-    for pid, p in products.items():
-        kb.append([InlineKeyboardButton(f"🗑 {p['name']}", callback_data=f"del_{pid}")])
-    kb.append([InlineKeyboardButton("⬅️ Бозгашт", callback_data="admin")])
-    await q.edit_message_text("Кадомро нест кунем?", reply_markup=InlineKeyboardMarkup(kb))
-
-async def delete_product(update, context):
-    q = update.callback_query
-    await q.answer()
-    pid = q.data.replace("del_", "")
-    if pid in products:
-        del products[pid]
-        save()
-    await q.edit_message_text("✅ Нест карда шуд.", reply_markup=admin_kb())
-
-async def back(update, context):
-    q = update.callback_query
-    await q.answer()
-    await start(update, context)
-
-# ---------- ИЛОВАИ МАҲСУЛОТ ----------
-
-async def add_start(update, context):
-    q = update.callback_query
-    await q.answer()
-    if q.from_user.id not in ADMIN_IDS:
+    if data.startswith("reject_"):
+        user_id = int(data.split("_")[1])
+        await context.bot.send_message(user_id, "❌ Мутаассифона фармоиши шумо рад шуд. Барои маълумоти бештар ба админ нависед.")
+        await q.edit_message_text("❌ Рад шуд.")
         return
-    await q.edit_message_text("Категорияро интихоб кун:", reply_markup=categories_kb())
-    return CHOOSE
 
-async def choose_cat(update, context):
-    q = update.callback_query
-    await q.answer()
-    context.user_data["category"] = q.data.replace("cat_", "")
-    await q.edit_message_text("📸 Акси маҳсулотро равон кун:")
-    return PHOTO
-
-async def get_photo(update, context):
-    if not update.message.photo:
-        await update.message.reply_text("Лутфан акс равон кун.")
-        return PHOTO
-    context.user_data["photo"] = update.message.photo[-1].file_id
-    await update.message.reply_text("✏️ Номи маҳсулотро нависед:")
-    return NAME
-
-async def get_name(update, context):
-    context.user_data["name"] = update.message.text
-    await update.message.reply_text("💰 Нархро нависед (фақат рақам, масалан: 150):")
-    return PRICE
-
-async def get_price(update, context):
-    price = update.message.text.strip()
-    if not price.isdigit():
-        await update.message.reply_text("Лутфан фақат рақам нависед:")
-        return PRICE
-    pid = str(len(products) + 1)
-    while pid in products:
-        pid = str(int(pid) + 1)
-    products[pid] = {
-        "name": context.user_data["name"],
-        "price": price,
-        "photo": context.user_data.get("photo"),
-        "category": context.user_data.get("category", "Дигар")
-    }
-    save()
-    context.user_data.clear()
-    await update.message.reply_text("✅ Маҳсулот илова шуд!", reply_markup=main_kb(True))
-    return ConversationHandler.END
-
-async def cancel(update, context):
-    q = update.callback_query
-    if q:
-        await q.answer()
-        await q.edit_message_text("❌ Бекор карда шуд.", reply_markup=main_kb(q.from_user.id in ADMIN_IDS))
-    else:
-        await update.message.reply_text("❌ Бекор карда шуд.")
-    context.user_data.clear()
-    return ConversationHandler.END
-
-# ---------- MAIN ----------
+async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    text = update.message.text or "[Акс равон шуд]"
+    if context.user_data.get("await_custom"):
+        context.user_data["await_custom"] = False
+        if ADMIN_ID:
+            await context.bot.send_message(ADMIN_ID, f"✍️ ЗАКАЗИ НАВ АЗ АДМИН!\n\n👤 {user.first_name} (@{user.username})\n📝 {text}\n\nБарои ҷавоб, ба муштарӣ нависед.")
+        await update.message.reply_text("✅ Дархости шумо ба админ равон шуд! Админ ба зудӣ ҷавоб медиҳад.")
+        return
+    if context.user_data.get("await_order"):
+        context.user_data["await_order"] = False
+        cart = context.user_data.get("cart", [])
+        total = sum(x[1] for x in cart)
+        items = "\n".join([f"- {n} - {p} с." for n, p in cart])
+        if ADMIN_ID:
+            kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("✅ Қабул кардан", callback_data=f"accept_{user.id}"),
+                 InlineKeyboardButton("❌ Рад кардан", callback_data=f"reject_{user.id}")],
+                [InlineKeyboardButton(f"💬 WhatsApp-и муштарӣ", url=f"https://wa.me/{WHATSAPP}")]
+            ])
+            await context.bot.send_message(ADMIN_ID, f"🆕 ЗАЯВКАИ НАВ!\n\n👤 {user.first_name} (@{user.username})\n📞 {text}\n\n{items}\n\n💰 Ҷамъ: {total} сомонӣ", reply_markup=kb)
+        await update.message.reply_text("✅ Заявкаи шумо қабул шуд! Админ ба зудӣ тамос мегирад.")
+        context.user_data["cart"] = []
+        return
+    await update.message.reply_text("Барои оғоз /start -ро пахш кунед.")
 
 def main():
     app = Application.builder().token(TOKEN).build()
-    conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(add_start, pattern="^add$")],
-        states={
-            CHOOSE: [CallbackQueryHandler(choose_cat, pattern="^cat_")],
-            PHOTO: [MessageHandler(filters.PHOTO, get_photo)],
-            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
-            PRICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_price)],
-        },
-        fallbacks=[CallbackQueryHandler(cancel, pattern="^cancel$"), CommandHandler("cancel", cancel)],
-        allow_reentry=True
-    )
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(conv)
-    app.add_handler(CallbackQueryHandler(catalog, pattern="^catalog$"))
-    app.add_handler(CallbackQueryHandler(view_product, pattern="^view_"))
-    app.add_handler(CallbackQueryHandler(order, pattern="^order_"))
-    app.add_handler(CallbackQueryHandler(contact, pattern="^contact$"))
-    app.add_handler(CallbackQueryHandler(admin_panel, pattern="^admin$"))
-    app.add_handler(CallbackQueryHandler(delete_list, pattern="^delete_list$"))
-    app.add_handler(CallbackQueryHandler(delete_product, pattern="^del_"))
-    app.add_handler(CallbackQueryHandler(back, pattern="^back$"))
-    print("Bot started...")
+    app.add_handler(CallbackQueryHandler(button))
+    app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_msg))
+    print("Bot started")
     app.run_polling()
 
 if __name__ == "__main__":
