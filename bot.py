@@ -3,7 +3,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, filters, ContextTypes
 
 TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_IDS = [8975989959]
+ADMIN_IDS = [9228348493]
 CHOOSE, PHOTO, NAME, PRICE_SOM, PRICE_DOL, PRICE_YUAN = range(6)
 
 try:
@@ -171,14 +171,14 @@ async def add_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for cid, c in CATEGORIES.items():
         for sid, s in c["subs"].items():
             for b in s["brands"]:
-                kb.append([InlineKeyboardButton(f"{s['name']} > {b}", callback_data=f"{sid}|{b}")])
+                kb.append([InlineKeyboardButton(f"{s['name']} > {b}", callback_data=f"add_{sid}|{b}")])
     await update.message.reply_text("Кадом шохаро интихоб мекунӣ? 👇", reply_markup=InlineKeyboardMarkup(kb))
     return CHOOSE
 
 async def add_choose(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-    context.user_data["cat"] = q.data
+    context.user_data["cat"] = q.data[4:]
     await q.edit_message_text("Расми молро равон кун 📸")
     return PHOTO
 async def add_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -213,13 +213,13 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button))
     conv = ConversationHandler(
         entry_points=[CommandHandler("add", add_start)],
-        states={CHOOSE: [CallbackQueryHandler(add_choose)], PHOTO: [MessageHandler(filters.PHOTO, add_photo)], NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_name)], PRICE_SOM: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_price_som)], PRICE_DOL: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_price_dol)], PRICE_YUAN: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_price_yuan)]},
+        states={CHOOSE: [CallbackQueryHandler(add_choose, pattern="^add_")], PHOTO: [MessageHandler(filters.PHOTO, add_photo)], NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_name)], PRICE_SOM: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_price_som)], PRICE_DOL: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_price_dol)], PRICE_YUAN: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_price_yuan)]},
         fallbacks=[CommandHandler("cancel", cancel)],
     )
     app.add_handler(conv)
+    app.add_handler(CallbackQueryHandler(button))
     print("Bot started...")
     app.run_polling()
 if __name__ == "__main__":
