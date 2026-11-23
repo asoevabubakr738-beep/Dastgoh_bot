@@ -601,3 +601,118 @@ PRODUCTS["coffee_delonghi"] = {
 }
 
 PRODUCTS["coffee_bosch"]
+PRODUCTS["coffee_bosch"] = {
+    "name": "☕ Кофеварка Bosch",
+    "price": "95$ / 1,030с",
+    "photo": "https://m.media-amazon.com/images/I/71aX9b+ZxJL._AC_SL1500_.jpg",
+    "desc": "📦 5 дона",
+}
+
+PRODUCTS["coffee_philips"] = {
+    "name": "☕ Кофеварка Philips",
+    "price": "85$ / 920с",
+    "photo": "https://m.media-amazon.com/images/I/71bX9b+ZxJL._AC_SL1500_.jpg",
+    "desc": "📦 6 дона",
+}
+
+PRODUCTS["iron_philips"] = {
+    "name": "👕 Утюг Philips",
+    "price": "45$ / 490с",
+    "photo": "https://m.media-amazon.com/images/I/71cX9b+ZxJL._AC_SL1500_.jpg",
+    "desc": "📦 10 дона",
+}
+
+PRODUCTS["vacuum_xiaomi"] = {
+    "name": "🧹 Пылесос Xiaomi",
+    "price": "180$ / 1,950с",
+    "photo": "https://i01.appmifile.com/v1/MI_18455B3E4DA706226CF7535A58E08F55F/pms_1640001234.12345678.png",
+    "desc": "📦 4 дона",
+}
+
+CATEGORIES = {
+    "phones": ["iphone13", "iphone14", "iphone14pro", "iphone15", "iphone15pro", "iphone16", "iphone16pro", "samsung_a15", "samsung_a35", "samsung_a55", "samsung_s23", "samsung_s24", "samsung_s24u", "redmi_13c", "redmi_note13", "redmi_note13pro", "redmi_note14", "poco_x6", "xiaomi14", "honor_x8b", "honor_x9b", "honor_90", "honor_magic6", "huawei_nova12", "huawei_pura70", "vivo_y100", "oppo_a78", "oppo_reno11"],
+    "audio": ["airpods_pro2", "airpods2", "airpods3", "airpods_max", "buds2", "buds_pro", "redmi_buds5", "redmi_buds_pro", "jbl_tune", "wired"],
+    "charge": ["charge_20w", "charge_33w", "charge_67w", "charge_120w", "charge_anker", "cable_typec", "cable_light", "cable_micro", "cable_2m"],
+    "case": ["case_iphone", "case_samsung", "case_xiaomi", "case_leather", "glass_iphone", "glass_samsung", "glass_xiaomi", "laminat"],
+    "power": ["pb_xiaomi_10000", "pb_xiaomi_20000", "pb_anker", "pb_baseus", "pb_remax"],
+    "watch": ["watch_apple", "watch_apple_ultra", "watch_samsung", "watch_xiaomi", "watch_huawei", "watch_amazfit"],
+    "kitchen": ["blender_xiaomi", "blender_bosch", "blender_philips", "kettle_xiaomi", "kettle_bosch", "kettle_philips", "coffee_delonghi", "coffee_bosch", "coffee_philips", "iron_philips", "vacuum_xiaomi"],
+}
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("📱 Телефонҳо", callback_data="cat_phones")],
+        [InlineKeyboardButton("🎧 Наушник", callback_data="cat_audio")],
+        [InlineKeyboardButton("🔌 Зарядник ва Кабел", callback_data="cat_charge")],
+        [InlineKeyboardButton("📱 Чехол ва Шиша", callback_data="cat_case")],
+        [InlineKeyboardButton("🔋 Power Bank", callback_data="cat_power")],
+        [InlineKeyboardButton("⌚ Соат", callback_data="cat_watch")],
+        [InlineKeyboardButton("🍳 Ошхона", callback_data="cat_kitchen")],
+        [InlineKeyboardButton("📞 Алоқа", callback_data="contact")],
+    ]
+    text = f"🏪 {SHOP_NAME}\n\n📍 {SHOP_ADDRESS}\n🕐 {SHOP_TIME}\n📞 {SHOP_PHONE}\n\nКатегорияро интихоб кун:"
+    if update.message:
+        await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+    else:
+        await update.callback_query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+
+async def show_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    cat = query.data.replace("cat_", "")
+    keyboard = []
+    for key in CATEGORIES.get(cat, []):
+        p = PRODUCTS[key]
+        keyboard.append([InlineKeyboardButton(f"{p['name']} - {p['price']}", callback_data=f"prod_{key}")])
+    keyboard.append([InlineKeyboardButton("⬅️ Бозгашт", callback_data="back_start")])
+    await query.edit_message_text("Маҳсулотро интихоб кун:", reply_markup=InlineKeyboardMarkup(keyboard))
+
+async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    key = query.data.replace("prod_", "")
+    p = PRODUCTS[key]
+    keyboard = [
+        [InlineKeyboardButton("🛒 Фармоиш додан", callback_data=f"order_{key}")],
+        [InlineKeyboardButton("⬅️ Бозгашт", callback_data="back_start")],
+    ]
+    caption = f"{p['name']}\n\n💰 Нарх: {p['price']}\n\n{p['desc']}\n\n📍 {SHOP_ADDRESS}"
+    try:
+        await query.message.reply_photo(photo=p['photo'], caption=caption, reply_markup=InlineKeyboardMarkup(keyboard))
+    except:
+        await query.message.reply_text(caption, reply_markup=InlineKeyboardMarkup(keyboard))
+
+async def order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    key = query.data.replace("order_", "")
+    p = PRODUCTS[key]
+    user = query.from_user
+    await query.message.reply_text(f"✅ Фармоиши ту қабул шуд!\n\n{p['name']}\n💰 {p['price']}\n\n👤 {user.first_name} (@{user.username})\n\nМо ба зудӣ бо ту алоқа мекунем!\n📞 {SHOP_PHONE}")
+
+async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(f"📞 Алоқа:\n\n🏪 {SHOP_NAME}\n📍 {SHOP_ADDRESS}\n🕐 {SHOP_TIME}\n📞 {SHOP_PHONE}\n✈️ {SHOP_USERNAME}", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Бозгашт", callback_data="back_start")]]))
+
+async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await start(update, context)
+
+def main():
+    if not TOKEN:
+        logger.error("BOT_TOKEN нест!")
+        return
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(show_category, pattern="^cat_"))
+    app.add_handler(CallbackQueryHandler(show_product, pattern="^prod_"))
+    app.add_handler(CallbackQueryHandler(order, pattern="^order_"))
+    app.add_handler(CallbackQueryHandler(contact, pattern="^contact$"))
+    app.add_handler(CallbackQueryHandler(back, pattern="^back_start$"))
+    logger.info("Bot started!")
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
