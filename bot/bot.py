@@ -344,7 +344,7 @@ PRODUCTS["charge_33w"] = {
     "photo": "https://i01.appmifile.com/v1/MI_18455B3E4DA706226CF7535A58E08F55F/pms_1610001234.12345678.png",
     "desc": "⚡ 33W\n📦 25 дона",
 }
-
+PRODUCTS["coffee_bosch"] = {
 PRODUCTS["charge_67w"] = {
     "name": "🔌 Зарядник 67W Xiaomi",
     "price": "30$ / 325с",
