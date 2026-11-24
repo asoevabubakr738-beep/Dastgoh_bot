@@ -329,7 +329,78 @@ def callbacks(c):
             bot.answer_callback_query(c.id, f"{PRODUCTS[pid]['name']} ба сабад илова шуд! ✅")
             bot.send_message(c.message.chat.id, f"✅ {PRODUCTS[pid]['name']} ба сабад илова шуд!\nСабад: {cart_total(uid)} сомонӣ")
         elif data.startswith("add2_"):
-            pid = int(data[5:])
-            cart = get_cart(uid)
-            cart[pid] = cart.get(pid, 0) + 2
-            bot
+    pid = int(data[5:])
+    cart = get_cart(uid)
+    cart[pid] = cart.get(pid, 0) + 2
+    bot.answer_callback_query(c.id, "2 дона илова шуд! ✅")
+    bot.send_message(c.message.chat.id, f"✅ 2 дона илова шуд!\nСабад: {cart_total(uid)} сомонӣ")
+elif data == "clear_cart":
+    CARTS[uid] = {}
+    bot.edit_message_text("Сабад тоза шуд! 🗑", c.message.chat.id, c.message.message_id)
+elif data == "checkout":
+    if not get_cart(uid):
+        bot.answer_callback_query(c.id, "Сабад холӣ аст!")
+        return
+    bot.send_message(c.message.chat.id, "📝 Номи худро нависед:")
+    bot.register_next_step_handler(c.message, get_name)
+elif data == "admin_stats":
+    txt = f"📊 Статистика:\n\nИстифодабарандагон: {len(USERS)}\nФармоишҳо: {len(ORDERS)}\nМолҳо: {len(PRODUCTS)}"
+    bot.send_message(c.message.chat.id, txt)
+elif data == "admin_orders":
+    if not ORDERS:
+        bot.send_message(c.message.chat.id, "Фармоиш нест")
+    else:
+        txt = "📦 Фармоишҳо:\n\n"
+        for o in ORDERS[-10:]:
+            txt += f"#{o['id']} - {o['total']} с - {o['name']}\n"
+        bot.send_message(c.message.chat.id, txt)
+elif data == "admin_users":
+    bot.send_message(c.message.chat.id, f"👥 {len(USERS)} корбар")
+elif data == "admin_broadcast":
+    bot.send_message(c.message.chat.id, "Матни паёми оммавиро нависед:")
+    bot.register_next_step_handler(c.message, do_broadcast)
+elif data == "admin_add":
+    bot.send_message(c.message.chat.id, "Барои иловаи мол ба админ нависед")
+    except Exception as e:
+        print("Callback error:", e)
+
+def get_name(m):
+    USERS[m.from_user.id]["order_name"] = m.text
+    bot.send_message(m.chat.id, "📞 Рақами телефони худро нависед:")
+    bot.register_next_step_handler(m, get_phone)
+
+def get_phone(m):
+    USERS[m.from_user.id]["order_phone"] = m.text
+    bot.send_message(m.chat.id, "📍 Сурогаи худро нависед:")
+    bot.register_next_step_handler(m, get_address)
+
+def get_address(m):
+    uid = m.from_user.id
+    total = cart_total(uid) + 20
+    order_id = len(ORDERS) + 1
+    order = {"id": order_id, "user": uid, "name": USERS[uid].get("order_name", ""), "phone": USERS[uid].get("order_phone", ""), "address": m.text, "items": dict(get_cart(uid)), "total": total, "status": "Нав", "date": str(datetime.datetime.now())[:16]}
+    ORDERS.append(order)
+    CARTS[uid] = {}
+    bot.send_message(m.chat.id, f"✅ Фармоиш қабул шуд! №: {order_id}\n💰 Ҷамъ: {total} сомонӣ", reply_markup=main_menu())
+    try:
+        bot.send_message(ADMIN_ID, f"🆕 Фармоиши нав #{order_id}!\n{order['name']} - {order['phone']}\n{total} сомонӣ")
+    except:
+        pass
+
+def do_broadcast(m):
+    count = 0
+    for uid in list(USERS.keys()):
+        try:
+            bot.send_message(uid, f"📢 Эълон:\n\n{m.text}")
+            count += 1
+        except:
+            pass
+    bot.send_message(m.chat.id, f"Паём ба {count} нафар фиристода шуд!")
+
+@bot.message_handler(func=lambda m: True)
+def any_text(m):
+    save_user(m.from_user)
+    bot.send_message(m.chat.id, "Барои оғоз /start -ро пахш кунед", reply_markup=main_menu())
+
+print("Bot started... Magozai Tojik")
+bot.infinity_polling()
