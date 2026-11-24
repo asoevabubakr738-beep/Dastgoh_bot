@@ -409,10 +409,12 @@ def shop_cmd(m):
     save_user(m.from_user)
     bot.send_message(m.chat.id, "🛍 Категорияро интихоб кунед:", reply_markup=categories_keyboard())
 
-bot.message_handler(commands=["cart"])
+@bot.message_handler(commands=["cart"])
 def cart_cmd(m):
     save_user(m.from_user)
-   @bot.message_handler(func=lambda m: m.text == "📦 Фармоишҳои ман")
+    bot.send_message(m.chat.id, cart_text(m.from_user.id), reply_markup=cart_keyboard())
+
+@bot.message_handler(func=lambda m: m.text == "📦 Фармоишҳои ман")
 def my_orders_btn(m):
     save_user(m.from_user)
     uid = m.from_user.id
@@ -424,7 +426,15 @@ def my_orders_btn(m):
     for o in my_orders[-10:]:
         txt += format_order(o) + "\n---\n"
     bot.send_message(m.chat.id, txt, reply_markup=main_menu()) 
-bot.message_handler(commands=["admin"])
+@bot.message_handler(commands=["cart"])
+def cart_cmd(m):
+    save_user(m.from_user)
+    bot.send_message(m.chat.id, cart_text(m.from_user.id), reply_markup=cart_keyboard())
+
+@bot.message_handler(func=lambda m: m.text == "📦 Фармоишҳои ман")
+def my_orders_btn(m):
+    save_user(m.from_user)
+    uid = m.from_user.id
 def admin_cmd(m):
     if m.from_user.id != ADMIN_ID:
         bot.send_message(m.chat.id, "Шумо админ нестед! ❌")
