@@ -1,406 +1,833 @@
 # ============================================================
-# MAGOZAITOJIK_BOT - Боти пурраи Мағоза
-# Зиёда аз 800 сатр | Render Free | Python + TeleBot
+# MAGOZAI TOJIK - BOTI PURRA - 800+ SATR
+# Versiya: 2.0 - Toza, be xato
 # ============================================================
 import os
-import threading
-import json
-import datetime
-from flask import Flask
 import telebot
+import datetime
+import json
+import random
+import time
 from telebot import types
 
-# ---------------- 1. ТАНЗИМОТ ----------------
-TOKEN = os.environ.get("BOT_TOKEN")
-ADMIN_ID = 8975989959  # <-- ID-и худро дар ин ҷо навиш
-bot = telebot.TeleBot(TOKEN)
+# ============================================================
+# 1. TANZIMOT - IN JO RO IVAZ KUN
+# ============================================================
+TOKEN = os.environ.get("BOT_TOKEN", "9228348493:AAHh3KArLvSDS9GN46LadDe4V2cgFQTaC0k")
+ADMIN_ID = 8410101111
+ADMIN_PHONE = "+992 783 82 90 09"
+ADMIN_NAME = "Admin Magozai Tojik"
+SHOP_NAME = "Magozai Tojik"
+SHOP_ADDRESS = "Dushanbe, k. Rudaki 123"
+SHOP_WORK_TIME = "08:00 - 22:00"
+DELIVERY_PRICE = 20
+FREE_DELIVERY_FROM = 300
+MIN_ORDER = 30
+CURRENCY = "сомонӣ"
+BOT_VERSION = "2.0"
 
-app = Flask(__name__)
-@app.route('/')
-def home():
-    return "Bot is alive! Magozai Tojik"
+# ============================================================
+# 2. BOT RO SOXTAN
+# ============================================================
+bot = telebot.TeleBot(TOKEN, parse_mode=None)
 
-def run_web():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
-
-threading.Thread(target=run_web, daemon=True).start()
-
-# ---------------- 2. МАЪЛУМОТ ----------------
+# ============================================================
+# 3. MA'LUMOTHO - DATABASE DAR HOTIRA
+# ============================================================
 USERS = {}
 CARTS = {}
 ORDERS = []
-PRODUCTS = {}
+PRODUCTS = []
+CATEGORIES = []
+REVIEWS = []
+PROMOS = {}
 
-# Категория 1 - Либос
-PRODUCTS[1] = {"name": "Куртаи мардона", "price": 150, "cat": "Либос", "desc": "Куртаи сифати баланд, пахтагӣ", "photo": "", "stock": 20}
-PRODUCTS[2] = {"name": "Куртаи занона", "price": 180, "cat": "Либос", "desc": "Куртаи зебо, нақшҳои миллӣ", "photo": "", "stock": 15}
-PRODUCTS[3] = {"name": "Шим", "price": 120, "cat": "Либос", "desc": "Шими ҷинси, ҳама андоза", "photo": "", "stock": 30}
-PRODUCTS[4] = {"name": "Футболка", "price": 80, "cat": "Либос", "desc": "Футболкаи пахтагӣ, сафед/сиёҳ", "photo": "", "stock": 50}
-PRODUCTS[5] = {"name": "Койфта", "price": 200, "cat": "Либос", "desc": "Койфтаи гарм, зимистона", "photo": "", "stock": 10}
-PRODUCTS[6] = {"name": "Доман", "price": 250, "cat": "Либос", "desc": "Домани атлас, тӯйёна", "photo": "", "stock": 8}
-PRODUCTS[7] = {"name": "Чапан", "price": 300, "cat": "Либос", "desc": "Чапани миллӣ, дастӣ", "photo": "", "stock": 5}
-PRODUCTS[8] = {"name": "Рӯймол", "price": 60, "cat": "Либос", "desc": "Рӯймоли атлас, гулдор", "photo": "", "stock": 40}
-PRODUCTS[9] = {"name": "Ҷома", "price": 170, "cat": "Либос", "desc": "Ҷомаи мардона, тоза", "photo": "", "stock": 12}
-PRODUCTS[10] = {"name": "Кулӯла", "price": 45, "cat": "Либос", "desc": "Кулӯлаи пахтагӣ", "photo": "", "stock": 60}
-# Категория 2 - Телефон ва Техника
-PRODUCTS[11] = {"name": "Samsung A15", "price": 1800, "cat": "Техника", "desc": "Телефони нав, 128GB", "photo": "", "stock": 7}
-PRODUCTS[12] = {"name": "Redmi Note 13", "price": 2100, "cat": "Техника", "desc": "Камераи 108MP, 256GB", "photo": "", "stock": 6}
-PRODUCTS[13] = {"name": "iPhone 13", "price": 5500, "cat": "Техника", "desc": "iPhone оригинал, 128GB", "photo": "", "stock": 3}
-PRODUCTS[14] = {"name": "Наушник AirPods", "price": 350, "cat": "Техника", "desc": "Наушники бесим", "photo": "", "stock": 25}
-PRODUCTS[15] = {"name": "Соат Smart Watch", "price": 450, "cat": "Техника", "desc": "Соати ҳушманд, пульс", "photo": "", "stock": 18}
-PRODUCTS[16] = {"name": "Пуркунанда", "price": 90, "cat": "Техника", "desc": "Зарядник зуд, 25W", "photo": "", "stock": 100}
-PRODUCTS[17] = {"name": "Чехол", "price": 50, "cat": "Техника", "desc": "Чехол барои ҳама модел", "photo": "", "stock": 80}
-PRODUCTS[18] = {"name": "Колонка JBL", "price": 600, "cat": "Техника", "desc": "Колонкаи пурқувват", "photo": "", "stock": 9}
-PRODUCTS[19] = {"name": "Ноутбук HP", "price": 4500, "cat": "Техника", "desc": "Ноутбук, 8GB RAM, SSD", "photo": "", "stock": 4}
-PRODUCTS[20] = {"name": "Клавиатура", "price": 150, "cat": "Техника", "desc": "Клавиатура + муш", "photo": "", "stock": 20}
-# Категория 3 - Хӯрок
-PRODUCTS[21] = {"name": "Асал", "price": 120, "cat": "Хӯрок", "desc": "Асали кӯҳӣ, 1 кг", "photo": "", "stock": 30}
-PRODUCTS[22] = {"name": "Қурут", "price": 40, "cat": "Хӯрок", "desc": "Қурути тоҷикӣ", "photo": "", "stock": 100}
-PRODUCTS[23] = {"name": "Мурғ", "price": 55, "cat": "Хӯрок", "desc": "Гӯшти мурғ, 1 кг", "photo": "", "stock": 50}
-PRODUCTS[24] = {"name": "Биринҷ", "price": 35, "cat": "Хӯрок", "desc": "Биринҷи девзира", "photo": "", "stock": 200}
-PRODUCTS[25] = {"name": "Равғани зайтун", "price": 90, "cat": "Хӯрок", "desc": "Равғани табиӣ", "photo": "", "stock": 40}
-PRODUCTS[26] = {"name": "Чой", "price": 25, "cat": "Хӯрок", "desc": "Чойи сабз, 500гр", "photo": "", "stock": 90}
-PRODUCTS[27] = {"name": "Қаҳва", "price": 70, "cat": "Хӯрок", "desc": "Қаҳваи арабӣ", "photo": "", "stock": 60}
-PRODUCTS[28] = {"name": "Шоколад", "price": 30, "cat": "Хӯрок", "desc": "Шоколади ширӣ", "photo": "", "stock": 120}
-PRODUCTS[29] = {"name": "Мева хушк", "price": 80, "cat": "Хӯрок", "desc": "Мавиз, зардолу", "photo": "", "stock": 70}
-PRODUCTS[30] = {"name": "Нон", "price": 5, "cat": "Хӯрок", "desc": "Нони гарм, танӯрӣ", "photo": "", "stock": 500}
-# Категория 4 - Косметика
-PRODUCTS[31] = {"name": "Крем рӯй", "price": 110, "cat": "Косметика", "desc": "Креми намнок", "photo": "", "stock": 35}
-PRODUCTS[32] = {"name": "Атр", "price": 220, "cat": "Косметика", "desc": "Атри хушбӯй, 100мл", "photo": "", "stock": 15}
-PRODUCTS[33] = {"name": "Лаб-ранг", "price": 65, "cat": "Косметика", "desc": "Лаб-ранги қимат", "photo": "", "stock": 50}
-PRODUCTS[34] = {"name": "Шампун", "price": 55, "cat": "Косметика", "desc": "Шампуни мӯй", "photo": "", "stock": 80}
-PRODUCTS[35] = {"name": "Собун", "price": 20, "cat": "Косметика", "desc": "Собуни табиӣ", "photo": "", "stock": 200}
-PRODUCTS[36] = {"name": "Маска", "price": 40, "cat": "Косметика", "desc": "Маскаи рӯй", "photo": "", "stock": 90}
-PRODUCTS[37] = {"name": "Лак", "price": 35, "cat": "Косметика", "desc": "Лаки нохун", "photo": "", "stock": 70}
-PRODUCTS[38] = {"name": "Ойина", "price": 75, "cat": "Косметика", "desc": "Ойинаи зебо", "photo": "", "stock": 25}
-PRODUCTS[39] = {"name": "Хати чашм", "price": 30, "cat": "Косметика", "desc": "Хати чашм, сиёҳ", "photo": "", "stock": 60}
-PRODUCTS[40] = {"name": "Утюг мӯй", "price": 180, "cat": "Косметика", "desc": "Утюг барои мӯй", "photo": "", "stock": 12}
-# Категория 5 - Хона
-PRODUCTS[41] = {"name": "Қолин", "price": 900, "cat": "Хона", "desc": "Қолини дастӣ", "photo": "", "stock": 5}
-PRODUCTS[42] = {"name": "Кӯрпа", "price": 250, "cat": "Хона", "desc": "Кӯрпаи пахтагӣ", "photo": "", "stock": 20}
-PRODUCTS[43] = {"name": "Болишт", "price": 80, "cat": "Хона", "desc": "Болишти нарм", "photo": "", "stock": 40}
-PRODUCTS[44] = {"name": "Дег", "price": 150, "cat": "Хона", "desc": "Деги калон, 10л", "photo": "", "stock": 15}
-PRODUCTS[45] = {"name": "Табақ", "price": 60, "cat": "Хона", "desc": "Табақи чинӣ", "photo": "", "stock": 100}
-PRODUCTS[46] = {"name": "Пиёла", "price": 35, "cat": "Хона", "desc": "Пиёлаи чой, 6 дона", "photo": "", "stock": 80}
-PRODUCTS[47] = {"name": "Чойник", "price": 120, "cat": "Хона", "desc": "Чойники барқӣ", "photo": "", "stock": 18}
-PRODUCTS[48] = {"name": "Лампа", "price": 95, "cat": "Хона", "desc": "Лампаи мизи", "photo": "", "stock": 30}
-PRODUCTS[49] = {"name": "Парда", "price": 180, "cat": "Хона", "desc": "Пардаи зебо", "photo": "", "stock": 14}
-PRODUCTS[50] = {"name": "Соат деворӣ", "price": 130, "cat": "Хона", "desc": "Соати деворӣ", "photo": "", "stock": 22}
-# Категория 6 - Варзиш
-PRODUCTS[51] = {"name": "Тӯб", "price": 90, "cat": "Варзиш", "desc": "Тӯби футбол", "photo": "", "stock": 30}
-PRODUCTS[52] = {"name": "Кроссовка", "price": 280, "cat": "Варзиш", "desc": "Кроссовкаи варзишӣ", "photo": "", "stock": 16}
-PRODUCTS[53] = {"name": "Форма", "price": 160, "cat": "Варзиш", "desc": "Формаи варзишӣ", "photo": "", "stock": 20}
-PRODUCTS[54] = {"name": "Гантел", "price": 140, "cat": "Варзиш", "desc": "Гантел 5кг", "photo": "", "stock": 12}
-PRODUCTS[55] = {"name": "Ресмон", "price": 40, "cat": "Варзиш", "desc": "Ресмони ҷаҳидан", "photo": "", "stock": 50}
-PRODUCTS[56] = {"name": "Сумка варзишӣ", "price": 110, "cat": "Варзиш", "desc": "Сумкаи калон", "photo": "", "stock": 25}
-PRODUCTS[57] = {"name": "Велосипед", "price": 1500, "cat": "Варзиш", "desc": "Велосипеди нав", "photo": "", "stock": 3}
-PRODUCTS[58] = {"name": "Ракетка", "price": 120, "cat": "Варзиш", "desc": "Ракеткаи теннис", "photo": "", "stock": 18}
-PRODUCTS[59] = {"name": "Шлем", "price": 200, "cat": "Варзиш", "desc": "Шлеми велосипед", "photo": "", "stock": 10}
-PRODUCTS[60] = {"name": "Коврик йога", "price": 70, "cat": "Варзиш", "desc": "Коврик барои йога", "photo": "", "stock": 35}
-# Категория 7 - Китоб
-PRODUCTS[61] = {"name": "Китоби Тоҷикӣ", "price": 45, "cat": "Китоб", "desc": "Адабиёти тоҷик", "photo": "", "stock": 60}
-PRODUCTS[62] = {"name": "Қуръон", "price": 120, "cat": "Китоб", "desc": "Қуръони карим", "photo": "", "stock": 20}
-PRODUCTS[63] = {"name": "Луғат", "price": 60, "cat": "Китоб", "desc": "Луғати тоҷикӣ-русӣ", "photo": "", "stock": 30}
-PRODUCTS[64] = {"name": "Китоби кӯдакона", "price": 35, "cat": "Китоб", "desc": "Афсонаҳо", "photo": "", "stock": 80}
-PRODUCTS[65] = {"name": "Дафтар", "price": 15, "cat": "Китоб", "desc": "Дафтари 96 варақ", "photo": "", "stock": 200}
-PRODUCTS[66] = {"name": "Қалам", "price": 10, "cat": "Китоб", "desc": "Қалами кабуд", "photo": "", "stock": 500}
-PRODUCTS[67] = {"name": "Ранга", "price": 25, "cat": "Китоб", "desc": "Қаламҳои ранга", "photo": "", "stock": 100}
-PRODUCTS[68] = {"name": "Сумка мактабӣ", "price": 150, "cat": "Китоб", "desc": "Сумка барои мактаб", "photo": "", "stock": 20}
-PRODUCTS[69] = {"name": "Китоби ошпазӣ", "price": 55, "cat": "Китоб", "desc": "Таомҳои тоҷикӣ", "photo": "", "stock": 25}
-PRODUCTS[70] = {"name": "Атлас", "price": 40, "cat": "Китоб", "desc": "Атласи ҷаҳон", "photo": "", "stock": 15}
-# Категория 8 - Бозича
-PRODUCTS[71] = {"name": "Мошинча", "price": 60, "cat": "Бозича", "desc": "Мошинчаи бозича", "photo": "", "stock": 40}
-PRODUCTS[72] = {"name": "Лӯхтак", "price": 80, "cat": "Бозича", "desc": "Лӯхтаки зебо", "photo": "", "stock": 30}
-PRODUCTS[73] = {"name": "Конструктор", "price": 120, "cat": "Бозича", "desc": "Лего, 200 дона", "photo": "", "stock": 20}
-PRODUCTS[74] = {"name": "Тӯбча", "price": 20, "cat": "Бозича", "desc": "Тӯбчаи ранга", "photo": "", "stock": 100}
-PRODUCTS[75] = {"name": "Дрон", "price": 800, "cat": "Бозича", "desc": "Дрони камерадор", "photo": "", "stock": 5}
-PRODUCTS[76] = {"name": "Пазл", "price": 45, "cat": "Бозича", "desc": "Пазл 500 дона", "photo": "", "stock": 35}
-PRODUCTS[77] = {"name": "Хирс", "price": 95, "cat": "Бозича", "desc": "Хирси нарм, калон", "photo": "", "stock": 18}
-PRODUCTS[78] = {"name": "Гитара", "price": 250, "cat": "Бозича", "desc": "Гитараи кӯдакона", "photo": "", "stock": 8}
-PRODUCTS[79] = {"name": "Шашка", "price": 30, "cat": "Бозича", "desc": "Шашка + Шоҳмот", "photo": "", "stock": 50}
-PRODUCTS[80] = {"name": "Робот", "price": 180, "cat": "Бозича", "desc": "Роботи ҳушманд", "photo": "", "stock": 12}
-# ---------------- 3. КЛАВИАТУРАҲО ----------------
-def main_menu():
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("🛍 Каталог", "🛒 Сабад")
-    kb.add("🔍 Ҷустуҷӯ", "📦 Фармоишҳои ман")
-    kb.add("⭐ Тахфифҳо", "📞 Алоқа")
-    kb.add("ℹ️ Дар бораи мо", "👤 Профили ман")
-    return kb
+# ============================================================
+# 4. KATEGORIYAHO
+# ============================================================
+CATEGORIES = [
+    {"id": "non", "name": "🍞 Нон ва Нонпазӣ", "emoji": "🍞"},
+    {"id": "shir", "name": "🥛 Шир ва Маҳсулоти ширӣ", "emoji": "🥛"},
+    {"id": "gusht", "name": "🥩 Гӯшт ва Моҳӣ", "emoji": "🥩"},
+    {"id": "meva", "name": "🍎 Меваҳо", "emoji": "🍎"},
+    {"id": "sabzavot", "name": "🥦 Сабзавот", "emoji": "🥦"},
+    {"id": "nushoki", "name": "🥤 Нӯшокиҳо", "emoji": "🥤"},
+    {"id": "shirini", "name": "🍰 Шириниҳо", "emoji": "🍰"},
+    {"id": "xurak", "name": "🍜 Хӯроки тайёр", "emoji": "🍜"},
+    {"id": "konserv", "name": "🥫 Консерваҳо", "emoji": "🥫"},
+    {"id": "xoja", "name": "🧴 Маҳсулоти хонагӣ", "emoji": "🧴"},
+    {"id": "kudak", "name": "👶 Барои кӯдакон", "emoji": "👶"},
+    {"id": "sog", "name": "💊 Саломатӣ", "emoji": "💊"},
+]
 
-def cats_menu():
-    kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("👕 Либос", callback_data="cat_Либос"))
-    kb.add(types.InlineKeyboardButton("📱 Техника", callback_data="cat_Техника"))
-    kb.add(types.InlineKeyboardButton("🍯 Хӯрок", callback_data="cat_Хӯрок"))
-    kb.add(types.InlineKeyboardButton("💄 Косметика", callback_data="cat_Косметика"))
-    kb.add(types.InlineKeyboardButton("🏠 Хона", callback_data="cat_Хона"))
-    kb.add(types.InlineKeyboardButton("⚽ Варзиш", callback_data="cat_Варзиш"))
-    kb.add(types.InlineKeyboardButton("📚 Китоб", callback_data="cat_Китоб"))
-    kb.add(types.InlineKeyboardButton("🧸 Бозича", callback_data="cat_Бозича"))
-    kb.add(types.InlineKeyboardButton("🔙 Меню", callback_data="back_main"))
-    return kb
+# ============================================================
+# 5. MAHSULOTHO - 120+ MAHSULOT
+# ============================================================
+def add_product(pid, name, price, old_price, cat, desc, emoji, stock):
+    PRODUCTS.append({
+        "id": pid,
+        "name": name,
+        "price": price,
+        "old_price": old_price,
+        "cat": cat,
+        "desc": desc,
+        "emoji": emoji,
+        "stock": stock,
+        "rating": round(random.uniform(4.0, 5.0), 1),
+        "sold": random.randint(10, 500),
+    })
 
-def products_menu(cat):
-    kb = types.InlineKeyboardMarkup()
-    for pid, p in PRODUCTS.items():
-        if p["cat"] == cat:
-            kb.add(types.InlineKeyboardButton(f"{p['name']} - {p['price']} с", callback_data=f"prod_{pid}"))
-    kb.add(types.InlineKeyboardButton("🔙 Категорияҳо", callback_data="back_cats"))
-    return kb
+add_product(1, "Нони гарм", 5, 6, "non", "Нони гарми тоҷикӣ, ҳар рӯз пухта мешавад", "🍞", 100)
+add_product(2, "Нони фатир", 8, 10, "non", "Фатири равғанӣ, болаззат", "🫓", 80)
+add_product(3, "Нони қатлама", 12, 15, "non", "Қатлама бо равғани маска", "🥞", 50)
+add_product(4, "Булочка", 4, 5, "non", "Булочкаи нарм", "🥐", 120)
+add_product(5, "Лаваш", 6, 7, "non", "Лаваши тунук", "🌮", 90)
+add_product(6, "Кулча", 7, 9, "non", "Кулчаи анъанавӣ", "🍪", 70)
+add_product(7, "Пирожки бо гӯшт", 10, 12, "non", "Пирожки гарм бо гӯшт", "🥟", 60)
+add_product(8, "Самбуса", 9, 11, "non", "Самбусаи тоҷикӣ", "🥟", 80)
+add_product(9, "Шир 1л", 12, 14, "shir", "Шири тару тоза, 1 литр", "🥛", 100)
+add_product(10, "Қаймоқ 200г", 15, 18, "shir", "Қаймоқи табиӣ", "🧈", 60)
+add_product(11, "Панир 500г", 35, 40, "shir", "Панири хонагӣ", "🧀", 40)
+add_product(12, "Йогурт 500г", 10, 12, "shir", "Йогурти табиӣ", "🍶", 90)
+add_product(13, "Кефир 1л", 11, 13, "shir", "Кефири солим", "🥛", 80)
+add_product(14, "Творог 400г", 18, 22, "shir", "Твороги тару тоза", "🍚", 50)
+add_product(15, "Равғани маска 200г", 25, 30, "shir", "Равғани маскаи табиӣ", "🧈", 40)
+add_product(16, "Тухм 10 дона", 18, 20, "shir", "Тухми мурғи хонагӣ", "🥚", 200)
+add_product(17, "Гӯшти гов 1кг", 95, 110, "gusht", "Гӯшти тозаи гов", "🥩", 30)
+add_product(18, "Гӯшти гӯсфанд 1кг", 110, 125, "gusht", "Гӯшти гӯсфанди кӯҳӣ", "🥩", 25)
+add_product(19, "Мурғ 1кг", 45, 50, "gusht", "Мурғи тару тоза", "🍗", 40)
+add_product(20, "Гӯшти мурғ филе 1кг", 65, 75, "gusht", "Филеи мурғ", "🍗", 30)
+add_product(21, "Моҳӣ 1кг", 60, 70, "gusht", "Моҳии тару тоза", "🐟", 20)
+add_product(22, "Колбаса 500г", 55, 65, "gusht", "Колбасаи болаззат", "🌭", 35)
+add_product(23, "Сосиска 500г", 40, 48, "gusht", "Сосискаи мурғ", "🌭", 45)
+add_product(24, "Себ 1кг", 15, 18, "meva", "Себи тоҷикӣ, ширин", "🍎", 100)
+add_product(25, "Нок 1кг", 20, 25, "meva", "Ноки болаззат", "🍐", 80)
+add_product(26, "Ангур 1кг", 25, 30, "meva", "Ангури ширин", "🍇", 60)
+add_product(27, "Банана 1кг", 22, 26, "meva", "Бананаи тару тоза", "🍌", 90)
+add_product(28, "Апельсин 1кг", 28, 32, "meva", "Апельсини ширин", "🍊", 70)
+add_product(29, "Мандарин 1кг", 30, 35, "meva", "Мандарини ширин", "🍊", 60)
+add_product(30, "Лимон 1кг", 25, 30, "meva", "Лимон", "🍋", 50)
+add_product(31, "Анор 1кг", 35, 40, "meva", "Анори тоҷикӣ", "🍒", 40)
+add_product(32, "Шафтолу 1кг", 22, 28, "meva", "Шафтолуи ширин", "🍑", 70)
+add_product(33, "Олу 1кг", 18, 22, "meva", "Олуи тару тоза", "🍑", 80)
+add_product(34, "Тарбуз 1 дона", 30, 35, "meva", "Тарбузи ширин", "🍉", 30)
+add_product(35, "Харбуза 1 дона", 25, 30, "meva", "Харбузаи ширин", "🍈", 25)
+add_product(36, "Клубника 500г", 35, 40, "meva", "Клубникаи тару тоза", "🍓", 40)
+add_product(37, "Картошка 1кг", 8, 10, "sabzavot", "Картошкаи тоза", "🥔", 200)
+add_product(38, "Пиёз 1кг", 7, 9, "sabzavot", "Пиёзи тоҷикӣ", "🧅", 200)
+add_product(39, "Сабзӣ 1кг", 9, 11, "sabzavot", "Сабзии тару тоза", "🥕", 150)
+add_product(40, "Карам 1кг", 10, 12, "sabzavot", "Карами сафед", "🥬", 100)
+add_product(41, "Помидор 1кг", 18, 22, "sabzavot", "Помидори тару тоза", "🍅", 100)
+add_product(42, "Бодиринг 1кг", 15, 18, "sabzavot", "Бодиринги тару тоза", "🥒", 100)
+add_product(43, "Қаламфури булғор 1кг", 25, 30, "sabzavot", "Қаламфури ранга", "🫑", 60)
+add_product(44, "Бодинҷон 1кг", 14, 17, "sabzavot", "Бодинҷони тару тоза", "🍆", 70)
+add_product(45, "Каду 1кг", 12, 15, "sabzavot", "Каду", "🎃", 50)
+add_product(46, "Сир 1кг", 60, 70, "sabzavot", "Сири тоҷикӣ", "🧄", 40)
+add_product(47, "Кабудӣ", 5, 6, "sabzavot", "Кабудии тару тоза", "🌿", 120)
+add_product(48, "Лимӯи ширин 1кг", 20, 25, "sabzavot", "Лимӯи ширин", "🥒", 60)
+add_product(49, "Оби маъданӣ 1.5л", 6, 7, "nushoki", "Оби тозаи маъданӣ", "💧", 200)
+add_product(50, "Кола 1л", 12, 14, "nushoki", "Колаи хунук", "🥤", 150)
+add_product(51, "Афшураи себ 1л", 18, 22, "nushoki", "Афшураи табиӣ", "🧃", 80)
+add_product(52, "Афшураи апельсин 1л", 20, 25, "nushoki", "Афшураи табиӣ", "🧃", 70)
+add_product(53, "Чойи сабз 100г", 25, 30, "nushoki", "Чойи сабзи тоҷикӣ", "🍵", 60)
+add_product(54, "Қаҳва 200г", 55, 65, "nushoki", "Қаҳваи хушбӯй", "☕", 40)
+add_product(55, "Ширчой", 15, 18, "nushoki", "Ширчойи тайёр", "🍵", 50)
+add_product(56, "Компот 1л", 16, 20, "nushoki", "Компоти хонагӣ", "🥤", 60)
+add_product(57, "Торту асал", 80, 95, "shirini", "Торти асалӣ", "🍰", 20)
+add_product(58, "Торту шоколад", 90, 110, "shirini", "Торти шоколадӣ", "🍫", 20)
+add_product(59, "Печенье 500г", 30, 35, "shirini", "Печеньеи болаззат", "🍪", 70)
+add_product(60, "Шоколад", 25, 30, "shirini", "Шоколади ширӣ", "🍫", 90)
+add_product(61, "Конфет 500г", 40, 48, "shirini", "Конфетҳои гуногун", "🍬", 60)
+add_product(62, "Асал 500г", 65, 75, "shirini", "Асали табиии кӯҳӣ", "🍯", 30)
+add_product(63, "Мураббо 500г", 35, 42, "shirini", "Мураббои зардолу", "🍯", 40)
+add_product(64, "Халво 500г", 45, 55, "shirini", "Халвои тоҷикӣ", "🍮", 35)
+add_product(65, "Ош 1 порсия", 35, 40, "xurak", "Оши тоҷикӣ", "🍚", 50)
+add_product(66, "Манту 5 дона", 30, 35, "xurak", "Мантуи гарм", "🥟", 40)
+add_product(67, "Шашлик 1 порсия", 55, 65, "xurak", "Шашлики гӯшт", "🍢", 30)
+add_product(68, "Шӯрбо 1 порсия", 28, 32, "xurak", "Шӯрбои болаззат", "🍲", 40)
+add_product(69, "Лагман 1 порсия", 32, 38, "xurak", "Лагмани тоҷикӣ", "🍜", 35)
+add_product(70, "Қурутоб 1 порсия", 38, 45, "xurak", "Қурутоби анъанавӣ", "🍲", 25)
+add_product(71, "Пицца 1 дона", 70, 85, "xurak", "Пиццаи болаззат", "🍕", 20)
+add_product(72, "Бургер 1 дона", 45, 55, "xurak", "Бургери болаззат", "🍔", 30)
+add_product(73, "Консерва моҳӣ", 30, 35, "konserv", "Консерваи моҳӣ", "🐟", 50)
+add_product(74, "Консерва гӯшт", 40, 48, "konserv", "Консерваи гӯшт", "🥫", 40)
+add_product(75, "Нахӯд консерва", 15, 18, "konserv", "Нахӯди консерва", "🥫", 80)
+add_product(76, "Лобиё консерва", 14, 17, "konserv", "Лобиёи консерва", "🥫", 80)
+add_product(77, "Томат 500г", 18, 22, "konserv", "Томати табиӣ", "🍅", 60)
+add_product(78, "Бодиринг бӯғӣ", 25, 30, "konserv", "Бодиринги бӯғӣ", "🥒", 50)
+add_product(79, "Собун 1 дона", 12, 15, "xoja", "Собуни хушбӯй", "🧼", 100)
+add_product(80, "Шампунь 500мл", 35, 42, "xoja", "Шампуни мӯй", "🧴", 50)
+add_product(81, "Хамираи дандон", 18, 22, "xoja", "Хамираи дандон", "🪥", 80)
+add_product(82, "Коғази ҳоҷат 4 дона", 20, 25, "xoja", "Коғази ҳоҷат", "🧻", 70)
+add_product(83, "Моюи зарфшӯӣ", 15, 18, "xoja", "Моюи зарфшӯӣ", "🧽", 60)
+add_product(84, "Хокаи ҷомашӯӣ 1кг", 45, 55, "xoja", "Хокаи ҷомашӯӣ", "🧺", 40)
+add_product(85, "Шири кӯдак 400г", 85, 95, "kudak", "Шири кӯдак", "🍼", 30)
+add_product(86, "Памперс 20 дона", 95, 110, "kudak", "Памперси кӯдак", "👶", 25)
+add_product(87, "Каши кӯдак", 35, 42, "kudak", "Каши кӯдак", "🥣", 40)
+add_product(88, "Витамин C", 40, 50, "sog", "Витамини C", "💊", 50)
+add_product(89, "Маска 10 дона", 20, 25, "sog", "Маскаи тиббӣ", "😷", 100)
+add_product(90, "Антисептик", 15, 18, "sog", "Антисептик", "🧴", 80)
+add_product(91, "Равғани зайтун 500мл", 65, 75, "konserv", "Равғани зайтун", "🫒", 30)
+add_product(92, "Равғани офтобпараст 1л", 30, 35, "konserv", "Равғани офтобпараст", "🌻", 60)
+add_product(93, "Биринҷ 1кг", 22, 26, "konserv", "Биринҷи беҳтарин", "🍚", 100)
+add_product(94, "Макарон 500г", 14, 17, "konserv", "Макарони Италия", "🍝", 90)
+add_product(95, "Орд 1кг", 12, 14, "konserv", "Орди гандум", "🌾", 120)
+add_product(96, "Шакар 1кг", 13, 15, "konserv", "Шакари сафед", "🍬", 150)
+add_product(97, "Намак 1кг", 5, 6, "konserv", "Намак", "🧂", 200)
+add_product(98, "Чойи сиёҳ 100г", 28, 32, "nushoki", "Чойи сиёҳи хушбӯй", "🍵", 70)
+add_product(99, "Кофе 3в1 10 дона", 30, 35, "nushoki", "Кофе 3 дар 1", "☕", 80)
+add_product(100, "Энергетик 500мл", 18, 22, "nushoki", "Энергетик", "⚡", 60)
+add_product(101, "Йогурти нӯшиданӣ", 9, 11, "shir", "Йогурти нӯшиданӣ", "🥛", 90)
+add_product(102, "Сметана 200г", 14, 17, "shir", "Сметана", "🍶", 70)
+add_product(103, "Қурут 200г", 20, 25, "shir", "Қурути тоҷикӣ", "⚪", 50)
+add_product(104, "Чакка 500г", 22, 26, "shir", "Чаккаи табиӣ", "🍚", 50)
+add_product(105, "Гӯшти мурғобӣ 1кг", 70, 80, "gusht", "Гӯшти мурғобӣ", "🦆", 20)
+add_product(106, "Тухми бедона 20 дона", 25, 30, "shir", "Тухми бедона", "🥚", 60)
+add_product(107, "Ківі 1кг", 35, 40, "meva", "Ківӣ", "🥝", 40)
+add_product(108, "Ананас 1 дона", 45, 55, "meva", "Ананас", "🍍", 25)
+add_product(109, "Манго 1кг", 50, 60, "meva", "Манго", "🥭", 30)
+add_product(110, "Гелос 1кг", 40, 48, "meva", "Гелоси ширин", "🍒", 50)
+add_product(111, "Зардолу 1кг", 20, 25, "meva", "Зардолуи ширин", "🍑", 70)
+add_product(112, "Шафтолу хушк 500г", 30, 35, "meva", "Шафтолуи хушк", "🍑", 40)
+add_product(113, "Мавизи сиёҳ 500г", 35, 42, "meva", "Мавизи сиёҳ", "🍇", 40)
+add_product(114, "Чормағз 500г", 55, 65, "meva", "Чормағзи тоҷикӣ", "🌰", 30)
+add_product(115, "Бодом 500г", 60, 70, "meva", "Бодоми ширин", "🌰", 30)
+add_product(116, "Писта 500г", 70, 85, "meva", "Пистаи болаззат", "🌰", 25)
+add_product(117, "Карам гул 1кг", 18, 22, "sabzavot", "Карами гул", "🥦", 50)
+add_product(118, "Брокколи 1кг", 30, 35, "sabzavot", "Брокколи", "🥦", 40)
+add_product(119, "Занҷабил 500г", 40, 48, "sabzavot", "Занҷабил", "🫚", 30)
+add_product(120, "Кашнич 1 даста", 6, 8, "sabzavot", "Кашнич", "🌿", 100)
 
-def product_menu(pid):
-    kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("🛒 Ба сабад илова кун", callback_data=f"add_{pid}"))
-    kb.add(types.InlineKeyboardButton("➕ 1 дона", callback_data=f"add_{pid}"), types.InlineKeyboardButton("➕ 2 дона", callback_data=f"add2_{pid}"))
-    kb.add(types.InlineKeyboardButton("🔙 Бозгашт", callback_data=f"cat_{PRODUCTS[pid]['cat']}"))
-    return kb
+# ============================================================
+# 6. FUNKSIYAHOI YORIDAMCHI
+# ============================================================
+def get_product(pid):
+    for p in PRODUCTS:
+        if p["id"] == pid:
+            return p
+    return None
 
-def cart_menu():
-    kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("✅ Фармоиш додан", callback_data="checkout"))
-    kb.add(types.InlineKeyboardButton("🗑 Сабадро тоза кун", callback_data="clear_cart"))
-    kb.add(types.InlineKeyboardButton("🔙 Меню", callback_data="back_main"))
-    return kb
+def get_category(cid):
+    for c in CATEGORIES:
+        if c["id"] == cid:
+            return c
+    return None
 
-def admin_menu():
-    kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("📊 Статистика", callback_data="admin_stats"))
-    kb.add(types.InlineKeyboardButton("📦 Ҳама фармоишҳо", callback_data="admin_orders"))
-    kb.add(types.InlineKeyboardButton("👥 Истифодабарандагон", callback_data="admin_users"))
-    kb.add(types.InlineKeyboardButton("📢 Паёми оммавӣ", callback_data="admin_broadcast"))
-    kb.add(types.InlineKeyboardButton("➕ Мол илова кун", callback_data="admin_add"))
-    return kb
+def save_user(user):
+    uid = user.id
+    if uid not in USERS:
+        USERS[uid] = {
+            "id": uid,
+            "name": user.first_name or "",
+            "username": user.username or "",
+            "phone": "",
+            "address": "",
+            "orders": 0,
+            "total_spent": 0,
+            "joined": str(datetime.datetime.now())[:16],
+            "is_admin": uid == ADMIN_ID,
+        }
+    return USERS[uid]
 
-# ---------------- 4. ЁРДАМЧӢ ----------------
 def get_cart(uid):
     if uid not in CARTS:
         CARTS[uid] = {}
     return CARTS[uid]
 
-def cart_total(uid):
-    total = 0
+def cart_count(uid):
     cart = get_cart(uid)
+    total = 0
+    for qty in cart.values():
+        total += qty
+    return total
+
+def cart_total(uid):
+    cart = get_cart(uid)
+    total = 0
     for pid, qty in cart.items():
-        if pid in PRODUCTS:
-            total += PRODUCTS[pid]["price"] * qty
+        p = get_product(pid)
+        if p:
+            total += p["price"] * qty
     return total
 
 def cart_text(uid):
     cart = get_cart(uid)
     if not cart:
-        return "Сабади шумо холӣ аст! 🛒\nБарои харидорӣ ба Каталог гузаред."
+        return "Сабад холӣ аст! 🛒\n\nБарои харидорӣ ба мағоза равед."
     txt = "🛒 Сабади шумо:\n\n"
     for pid, qty in cart.items():
-        p = PRODUCTS.get(pid)
+        p = get_product(pid)
         if p:
-            txt += f"• {p['name']} x{qty} = {p['price']*qty} сомонӣ\n"
-    txt += f"\n💰 Ҷамъ: {cart_total(uid)} сомонӣ"
-    txt += "\n🚚 Доставка: 20 сомонӣ (Душанбе)"
-    txt += f"\n💳 Ҷамъ бо доставка: {cart_total(uid)+20} сомонӣ"
+            txt += f"{p['emoji']} {p['name']}\n"
+            txt += f"   {qty} x {p['price']} = {qty * p['price']} {CURRENCY}\n\n"
+    subtotal = cart_total(uid)
+    txt += f"-------------------------\n"
+    txt += f"Ҷамъи мол: {subtotal} {CURRENCY}\n"
+    delivery = 0
+    if subtotal < FREE_DELIVERY_FROM:
+        delivery = DELIVERY_PRICE
+        txt += f"Доставка: {delivery} {CURRENCY}\n"
+    else:
+        txt += f"Доставка: Ройгон! 🎉\n"
+    txt += f"💰 ҶАМЪ: {subtotal + delivery} {CURRENCY}\n"
     return txt
 
-def save_user(user):
-    USERS[user.id] = {"name": user.first_name, "username": user.username, "date": str(datetime.datetime.now())}
+def format_product(p):
+    txt = f"{p['emoji']} {p['name']}\n\n"
+    txt += f"💰 Нарх: {p['price']} {CURRENCY}\n"
+    if p["old_price"] > p["price"]:
+        txt += f"~~{p['old_price']} {CURRENCY}~~  (-{p['old_price'] - p['price']} {CURRENCY}!)\n"
+    txt += f"⭐ Рейтинг: {p['rating']} | Фурӯхта шуд: {p['sold']}\n"
+    txt += f"📦 Дар анбор: {p['stock']} дона\n\n"
+    txt += f"📝 {p['desc']}\n"
+    return txt
 
-# ---------------- 5. /start ----------------
-@bot.message_handler(commands=['start'])
+def format_order(o):
+    txt = f"📦 Фармоиш №{o['id']}\n"
+    txt += f"📅 {o['date']}\n"
+    txt += f"👤 {o['name']}\n"
+    txt += f"📞 {o['phone']}\n"
+    txt += f"📍 {o['address']}\n"
+    txt += f"💰 {o['total']} {CURRENCY}\n"
+    txt += f"📊 {o['status']}\n"
+    return txt
+
+# ============================================================
+# 7. MENYUHO - KEYBOARDS
+# ============================================================
+def main_menu():
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    kb.add(types.KeyboardButton("🛍 Мағоза"), types.KeyboardButton("🛒 Сабад"))
+    kb.add(types.KeyboardButton("🔍 Ҷустуҷӯ"), types.KeyboardButton("📦 Фармоишҳои ман"))
+    kb.add(types.KeyboardButton("⭐ Бестселлерҳо"), types.KeyboardButton("🔥 Тахфифҳо"))
+    kb.add(types.KeyboardButton("ℹ️ Дар бораи мо"), types.KeyboardButton("📞 Тамос"))
+    kb.add(types.KeyboardButton("👤 Профили ман"))
+    return kb
+
+def admin_menu():
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    kb.add(types.KeyboardButton("🛍 Мағоза"), types.KeyboardButton("🛒 Сабад"))
+    kb.add(types.KeyboardButton("📊 Статистика"), types.KeyboardButton("📦 Ҳамаи фармоишҳо"))
+    kb.add(types.KeyboardButton("👥 Корбарон"), types.KeyboardButton("📢 Паёми оммавӣ"))
+    kb.add(types.KeyboardButton("➕ Иловаи мол"), types.KeyboardButton("ℹ️ Дар бораи мо"))
+    kb.add(types.KeyboardButton("👤 Профили ман"))
+    return kb
+
+def categories_keyboard():
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    for c in CATEGORIES:
+        kb.add(types.InlineKeyboardButton(c["name"], callback_data=f"cat_{c['id']}"))
+    kb.add(types.InlineKeyboardButton("🏠 Менюи асосӣ", callback_data="home"))
+    return kb
+
+def products_keyboard(cat_id):
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    found = 0
+    for p in PRODUCTS:
+        if p["cat"] == cat_id:
+            kb.add(types.InlineKeyboardButton(f"{p['emoji']} {p['name']} - {p['price']} с", callback_data=f"prod_{p['id']}"))
+            found += 1
+            if found >= 20:
+                break
+    kb.add(types.InlineKeyboardButton("⬅️ Категорияҳо", callback_data="shop"))
+    kb.add(types.InlineKeyboardButton("🛒 Сабад", callback_data="view_cart"))
+    return kb
+
+def product_keyboard(pid):
+    kb = types.InlineKeyboardMarkup(row_width=3)
+    kb.add(
+        types.InlineKeyboardButton("➕ 1 дона", callback_data=f"add_{pid}"),
+        types.InlineKeyboardButton("➕➕ 2 дона", callback_data=f"add2_{pid}"),
+        types.InlineKeyboardButton("➕➕➕ 5 дона", callback_data=f"add5_{pid}"),
+    )
+    kb.add(
+        types.InlineKeyboardButton("🛒 Сабад", callback_data="view_cart"),
+        types.InlineKeyboardButton("⬅️ Бозгашт", callback_data="shop"),
+    )
+    return kb
+
+def cart_keyboard():
+    kb = types.InlineKeyboardMarkup(row_width=2)
+    kb.add(
+        types.InlineKeyboardButton("✅ Фармоиш додан", callback_data="checkout"),
+        types.InlineKeyboardButton("🗑 Тоза кардан", callback_data="clear_cart"),
+    )
+    kb.add(types.InlineKeyboardButton("🛍 Давом додани харид", callback_data="shop"))
+    return kb
+
+def checkout_keyboard():
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    kb.add(types.InlineKeyboardButton("✅ Тасдиқ кардан", callback_data="confirm_order"))
+    kb.add(types.InlineKeyboardButton("❌ Бекор кардан", callback_data="cancel_order"))
+    return kb
+
+def orders_keyboard():
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    kb.add(types.InlineKeyboardButton("🛍 Мағоза", callback_data="shop"))
+    kb.add(types.InlineKeyboardButton("🏠 Менюи асосӣ", callback_data="home"))
+    return kb
+
+# ============================================================
+# 8. /START - SARSHAVI
+# ============================================================
+@bot.message_handler(commands=["start"])
 def start_cmd(m):
     save_user(m.from_user)
-    txt = f"Салом, {m.from_user.first_name}! 👋\n\n"
-    txt += "Хуш омадед ба **Мағозаи Тоҷик**! 🇹🇯\n\n"
-    txt += "🛍 Зиёда аз 80 мол\n"
-    txt += "💰 Нархҳои арзон\n"
-    txt += "🚚 Доставка дар тамоми Тоҷикистон\n"
-    txt += "⭐ Тахфифҳо ҳар ҳафта\n\n"
-    txt += "Барои оғоз Каталогро интихоб кунед 👇"
+    uid = m.from_user.id
+    name = m.from_user.first_name or "Дӯст"
+    txt = f"Салом {name}! 👋\n\n"
+    txt += f"Хуш омадед ба {SHOP_NAME}! 🛍\n\n"
+    txt += "Ин ҷо шумо метавонед:\n"
+    txt += "✅ Молҳои тару тоза харед\n"
+    txt += "✅ Доставкаи зуд гиред\n"
+    txt += "✅ Нархҳои арзон\n"
+    txt += "✅ Тахфифҳо гиред\n\n"
+    txt += f"📍 {SHOP_ADDRESS}\n"
+    txt += f"🕐 {SHOP_WORK_TIME}\n"
+    txt += f"📞 {ADMIN_PHONE}\n\n"
+    txt += "Барои оғоз тугмаи 🛍 Мағоза-ро пахш кунед!"
+    if uid == ADMIN_ID:
+        bot.send_message(m.chat.id, txt, reply_markup=admin_menu())
+    else:
+        bot.send_message(m.chat.id, txt, reply_markup=main_menu())
+
+@bot.message_handler(commands=["help"])
+def help_cmd(m):
+    save_user(m.from_user)
+    txt = "🆘 Ёрӣ:\n\n"
+    txt += "/start - Оғоз\n"
+    txt += "/shop - Мағоза\n"
+    txt += "/cart - Сабад\n"
+    txt += "/orders - Фармоишҳо\n"
+    txt += "/help - Ёрӣ\n\n"
+    txt += f"📞 Тамос: {ADMIN_PHONE}\n"
+    txt += f"📍 {SHOP_ADDRESS}"
     bot.send_message(m.chat.id, txt, reply_markup=main_menu())
 
-@bot.message_handler(commands=['help'])
-def help_cmd(m):
-    bot.send_message(m.chat.id, "Ёрдам:\n/start - Оғоз\n/catalog - Каталог\n/cart - Сабад\n/admin - Админ\nБарои фармоиш: Каталог -> Мол -> Ба сабад -> Фармоиш")
+@bot.message_handler(commands=["shop"])
+def shop_cmd(m):
+    save_user(m.from_user)
+    bot.send_message(m.chat.id, "🛍 Категорияро интихоб кунед:", reply_markup=categories_keyboard())
 
-@bot.message_handler(commands=['catalog'])
-def catalog_cmd(m):
-    bot.send_message(m.chat.id, "Категорияро интихоб кунед:", reply_markup=cats_menu())
-
-@bot.message_handler(commands=['cart'])
+@bot.message_handler(commands=["cart"])
 def cart_cmd(m):
-    bot.send_message(m.chat.id, cart_text(m.from_user.id), reply_markup=cart_menu())
+    save_user(m.from_user)
+    uid = m.from_user.id
+    bot.send_message(m.chat.id, cart_text(uid), reply_markup=cart_keyboard())
 
-@bot.message_handler(commands=['admin'])
+@bot.message_handler(commands=["orders"])
+def orders_cmd(m):
+    save_user(m.from_user)
+    uid = m.from_user.id
+    my_orders = [o for o in ORDERS if o["user"] == uid]
+    if not my_orders:
+        bot.send_message(m.chat.id, "Шумо ҳанӯз фармоиш надодаед! 😊", reply_markup=main_menu())
+        return
+    txt = "📦 Фармоишҳои шумо:\n\n"
+        for o in my_orders[-5:]:
+        txt += format_order(o) + "\n---\n"
+    bot.send_message(m.chat.id, txt, reply_markup=main_menu())
+
+@bot.message_handler(commands=["admin"])
 def admin_cmd(m):
-    if m.from_user.id == ADMIN_ID:
-        bot.send_message(m.chat.id, "Админ-панел:", reply_markup=admin_menu())
-    else:
-        bot.send_message(m.chat.id, "Шумо админ нестед!")
+    if m.from_user.id != ADMIN_ID:
+        bot.send_message(m.chat.id, "Шумо админ нестед! ❌")
+        return
+    txt = "👑 Панели Админ:\n\n"
+    txt += f"👥 Корбарон: {len(USERS)}\n"
+    txt += f"📦 Фармоишҳо: {len(ORDERS)}\n"
+    txt += f"🛍 Молҳо: {len(PRODUCTS)}\n"
+    bot.send_message(m.chat.id, txt, reply_markup=admin_menu())
 
-# ---------------- 6. ТЕКСТҲО ----------------
-@bot.message_handler(func=lambda m: m.text == "🛍 Каталог")
-def btn_catalog(m):
-    bot.send_message(m.chat.id, "Категорияро интихоб кунед:", reply_markup=cats_menu())
+@bot.message_handler(func=lambda m: m.text == "🛍 Мағоза")
+def shop_btn(m):
+    save_user(m.from_user)
+    bot.send_message(m.chat.id, "🛍 Категорияро интихоб кунед:", reply_markup=categories_keyboard())
 
 @bot.message_handler(func=lambda m: m.text == "🛒 Сабад")
-def btn_cart(m):
-    bot.send_message(m.chat.id, cart_text(m.from_user.id), reply_markup=cart_menu())
-
-@bot.message_handler(func=lambda m: m.text == "⭐ Тахфифҳо")
-def btn_sale(m):
-    txt = "⭐ ТАХФИФҲОИ ҲАФТА:\n\n"
-    txt += "• Ҳама либос -20%\n• Техника -10%\n• Хӯрок -15%\n• Ҳангоми харидории 3 мол - 1 мол ТУҲФА!\n\n"
-    txt += "Код: SALE20\n"
-    bot.send_message(m.chat.id, txt)
-
-@bot.message_handler(func=lambda m: m.text == "📞 Алоқа")
-def btn_contact(m):
-    bot.send_message(m.chat.id, "📞 Алоқа:\nТелефон: +992 900 00 00 00\nTelegram: @magozaitojik\nСурога: Душанбе, кӯчаи Рӯдакӣ 123\nСоат: 9:00 - 21:00")
-
-@bot.message_handler(func=lambda m: m.text == "ℹ️ Дар бораи мо")
-def btn_about(m):
-    bot.send_message(m.chat.id, "Мағозаи Тоҷик - беҳтарин мағозаи онлайн дар Тоҷикистон!\nАз соли 2024 кор мекунем.\nЗиёда аз 5000 муштарӣ!\nСифат кафолат дода мешавад!")
-
-@bot.message_handler(func=lambda m: m.text == "👤 Профили ман")
-def btn_profile(m):
-    u = m.from_user
-    txt = f"👤 Профили шумо:\n\nНом: {u.first_name}\nUsername: @{u.username}\nID: {u.id}\nСабад: {cart_total(u.id)} сомонӣ\nФармоишҳо: {len([o for o in ORDERS if o['user']==u.id])}"
-    bot.send_message(m.chat.id, txt)
+def cart_btn(m):
+    save_user(m.from_user)
+    uid = m.from_user.id
+    bot.send_message(m.chat.id, cart_text(uid), reply_markup=cart_keyboard())
 
 @bot.message_handler(func=lambda m: m.text == "🔍 Ҷустуҷӯ")
-def btn_search(m):
-    bot.send_message(m.chat.id, "Номи молро нависед, масалан: Курта, Телефон, Асал")
+def search_btn(m):
+    save_user(m.from_user)
+    bot.send_message(m.chat.id, "🔍 Номи молро нависед:\nМисол: нон, шир, себ")
     bot.register_next_step_handler(m, do_search)
 
 def do_search(m):
-    q = m.text.lower()
+    save_user(m.from_user)
+    query = m.text.lower().strip()
     found = []
-    for pid, p in PRODUCTS.items():
-        if q in p["name"].lower() or q in p["cat"].lower():
-            found.append((pid, p))
+    for p in PRODUCTS:
+        if query in p["name"].lower() or query in p["desc"].lower():
+            found.append(p)
     if not found:
-        bot.send_message(m.chat.id, "Мол ёфт нашуд 😔 Кӯшиш кунед дигар номро.")
+        bot.send_message(m.chat.id, f"😔 '{m.text}' ёфт нашуд!\nБоз кӯшиш кунед:", reply_markup=main_menu())
         return
-    txt = f"Ёфт шуд ({len(found)}):\n\n"
-    kb = types.InlineKeyboardMarkup()
-    for pid, p in found[:10]:
-        txt += f"• {p['name']} - {p['price']} с\n"
-        kb.add(types.InlineKeyboardButton(p["name"], callback_data=f"prod_{pid}"))
+    txt = f"🔍 Натиҷа барои '{m.text}': {len(found)} мол\n\n"
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    for p in found[:15]:
+        txt += f"{p['emoji']} {p['name']} - {p['price']} с\n"
+        kb.add(types.InlineKeyboardButton(f"{p['emoji']} {p['name']} - {p['price']} с", callback_data=f"prod_{p['id']}"))
+    kb.add(types.InlineKeyboardButton("🛍 Мағоза", callback_data="shop"))
     bot.send_message(m.chat.id, txt, reply_markup=kb)
 
 @bot.message_handler(func=lambda m: m.text == "📦 Фармоишҳои ман")
-def btn_orders(m):
-    my = [o for o in ORDERS if o["user"] == m.from_user.id]
-    if not my:
-        bot.send_message(m.chat.id, "Шумо ҳанӯз фармоиш надодаед.")
+def my_orders_btn(m):
+    save_user(m.from_user)
+    uid = m.from_user.id
+    my_orders = [o for o in ORDERS if o["user"] == uid]
+    if not my_orders:
+        bot.send_message(m.chat.id, "Шумо ҳанӯз фармоиш надодаед! 😊\nБарои фармоиш 🛍 Мағоза-ро пахш кунед", reply_markup=main_menu())
         return
     txt = "📦 Фармоишҳои шумо:\n\n"
-    for o in my[-5:]:
-        txt += f"#{o['id']} - {o['total']} с - {o['status']} - {o['date']}\n"
-    bot.send_message(m.chat.id, txt)
+    for o in my_orders[-10:]:
+        txt += format_order(o) + "\n---\n"
+    bot.send_message(m.chat.id, txt, reply_markup=main_menu())
 
-# ---------------- 7. CALLBACK ----------------
-@bot.callback_query_handler(func=lambda c: True)
-def callbacks(c):
-    uid = c.from_user.id
-    data = c.data
+@bot.message_handler(func=lambda m: m.text == "⭐ Бестселлерҳо")
+def bestsellers_btn(m):
+    save_user(m.from_user)
+    sorted_products = sorted(PRODUCTS, key=lambda x: x["sold"], reverse=True)[:10]
+    txt = "⭐ Бестселлерҳо - 10 моли беҳтарин:\n\n"
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    for i, p in enumerate(sorted_products, 1):
+        txt += f"{i}. {p['emoji']} {p['name']} - {p['price']} с (Фурӯхта: {p['sold']})\n"
+        kb.add(types.InlineKeyboardButton(f"{p['emoji']} {p['name']} - {p['price']} с", callback_data=f"prod_{p['id']}"))
+    kb.add(types.InlineKeyboardButton("🛍 Мағоза", callback_data="shop"))
+    bot.send_message(m.chat.id, txt, reply_markup=kb)
+
+@bot.message_handler(func=lambda m: m.text == "🔥 Тахфифҳо")
+def discounts_btn(m):
+    save_user(m.from_user)
+    discounted = [p for p in PRODUCTS if p["old_price"] > p["price"]]
+    discounted = sorted(discounted, key=lambda x: x["old_price"] - x["price"], reverse=True)[:10]
+    txt = "🔥 Тахфифҳо:\n\n"
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    for p in discounted:
+        save = p["old_price"] - p["price"]
+        txt += f"{p['emoji']} {p['name']}\n   ~~{p['old_price']}~~ -> {p['price']} с (-{save} с!)\n\n"
+        kb.add(types.InlineKeyboardButton(f"{p['emoji']} {p['name']} - {p['price']} с", callback_data=f"prod_{p['id']}"))
+    kb.add(types.InlineKeyboardButton("🛍 Мағоза", callback_data="shop"))
+    bot.send_message(m.chat.id, txt, reply_markup=kb)
+@bot.message_handler(func=lambda m: m.text == "ℹ️ Дар бораи мо")
+def about_btn(m):
+    save_user(m.from_user)
+    txt = f"ℹ️ Дар бораи {SHOP_NAME}:\n\n"
+    txt += "Мо беҳтарин мағозаи онлайн дар Тоҷикистон ҳастем! 🇹🇯\n\n"
+    txt += "✅ Молҳои тару тоза\n"
+    txt += "✅ Нархҳои арзон\n"
+    txt += "✅ Доставкаи зуд (30-60 дақиқа)\n"
+    txt += "✅ Пардохт бо нақд ё корт\n\n"
+    txt += f"📍 {SHOP_ADDRESS}\n"
+    txt += f"🕐 {SHOP_WORK_TIME}\n"
+    txt += f"📞 {ADMIN_PHONE}\n\n"
+    txt += f"Доставка: {DELIVERY_PRICE} сомонӣ\n"
+    txt += f"Доставкаи ройгон аз {FREE_DELIVERY_FROM} сомонӣ!"
+    bot.send_message(m.chat.id, txt, reply_markup=main_menu())
+
+@bot.message_handler(func=lambda m: m.text == "📞 Тамос")
+def contact_btn(m):
+    save_user(m.from_user)
+    txt = "📞 Тамос:\n\n"
+    txt += f"📱 Телефон: {ADMIN_PHONE}\n"
+    txt += f"👤 Админ: {ADMIN_NAME}\n"
+    txt += f"📍 {SHOP_ADDRESS}\n"
+    txt += f"🕐 {SHOP_WORK_TIME}\n\n"
+    txt += "Барои саволҳо занг занед ё дар ин ҷо нависед!"
+    bot.send_message(m.chat.id, txt, reply_markup=main_menu())
+
+@bot.message_handler(func=lambda m: m.text == "👤 Профили ман")
+def profile_btn(m):
+    save_user(m.from_user)
+    uid = m.from_user.id
+    u = USERS[uid]
+    my_orders = [o for o in ORDERS if o["user"] == uid]
+    txt = "👤 Профили шумо:\n\n"
+    txt += f"👤 Ном: {u['name']}\n"
+    txt += f"🆔 ID: {uid}\n"
+    txt += f"📱 Телефон: {u.get('phone', 'Навишта нашудааст')}\n"
+    txt += f"📍 Сурога: {u.get('address', 'Навишта нашудааст')}\n"
+    txt += f"📦 Фармоишҳо: {len(my_orders)}\n"
+    txt += f"💰 Ҳамаи харид: {u.get('total_spent', 0)} {CURRENCY}\n"
+    txt += f"📅 Аз: {u['joined']}\n"
+    if uid == ADMIN_ID:
+        txt += "\n👑 Шумо АДМИН ҳастед!"
+    bot.send_message(m.chat.id, txt, reply_markup=main_menu())
+
+@bot.message_handler(func=lambda m: m.text == "📊 Статистика")
+def stats_btn(m):
+    if m.from_user.id != ADMIN_ID:
+        return
+    total_revenue = sum(o["total"] for o in ORDERS)
+    txt = "📊 Статистика:\n\n"
+    txt += f"👥 Корбарон: {len(USERS)}\n"
+    txt += f"📦 Фармоишҳо: {len(ORDERS)}\n"
+    txt += f"💰 Даромад: {total_revenue} {CURRENCY}\n"
+    txt += f"🛍 Молҳо: {len(PRODUCTS)}\n"
+    txt += f"🛒 Сабадҳои фаъол: {len(CARTS)}\n\n"
+    txt += "Фармоишҳои охирин:\n"
+    for o in ORDERS[-5:]:
+        txt += f"#{o['id']} - {o['total']} с - {o['name']}\n"
+    bot.send_message(m.chat.id, txt, reply_markup=admin_menu())
+
+@bot.message_handler(func=lambda m: m.text == "📦 Ҳамаи фармоишҳо")
+def all_orders_btn(m):
+    if m.from_user.id != ADMIN_ID:
+        return
+    if not ORDERS:
+        bot.send_message(m.chat.id, "Фармоиш нест", reply_markup=admin_menu())
+        return
+    txt = "📦 Ҳамаи фармоишҳо:\n\n"
+    for o in ORDERS[-15:]:
+        txt += format_order(o) + "\n---\n"
+    bot.send_message(m.chat.id, txt, reply_markup=admin_menu())
+
+@bot.message_handler(func=lambda m: m.text == "👥 Корбарон")
+def users_btn(m):
+    if m.from_user.id != ADMIN_ID:
+        return
+    txt = f"👥 Корбарон: {len(USERS)}\n\n"
+    for uid, u in list(USERS.items())[-15:]:
+        txt += f"{u['name']} - {uid} - {u.get('phone', '-')}\n"
+    bot.send_message(m.chat.id, txt, reply_markup=admin_menu())
+
+@bot.message_handler(func=lambda m: m.text == "📢 Паёми оммавӣ")
+def broadcast_btn(m):
+    if m.from_user.id != ADMIN_ID:
+        return
+    bot.send_message(m.chat.id, "📢 Матни паёми оммавиро нависед:")
+    bot.register_next_step_handler(m, do_broadcast)
+
+def do_broadcast(m):
+    if m.from_user.id != ADMIN_ID:
+        return
+    count = 0
+    failed = 0
+    for uid in list(USERS.keys()):
+        try:
+            bot.send_message(uid, f"📢 Эълон аз {SHOP_NAME}:\n\n{m.text}\n\n📞 {ADMIN_PHONE}")
+            count += 1
+        except Exception:
+            failed += 1
+    bot.send_message(m.chat.id, f"✅ Паём ба {count} нафар фиристода шуд!\n❌ Хатогӣ: {failed}", reply_markup=admin_menu())
+
+@bot.message_handler(func=lambda m: m.text == "➕ Иловаи мол")
+def add_product_btn(m):
+    if m.from_user.id != ADMIN_ID:
+        return
+    bot.send_message(m.chat.id, "Барои иловаи мол, номи молро нависед:\nМисол: Нон, 5, non")
+    bot.register_next_step_handler(m, do_add_product_step1)
+
+def do_add_product_step1(m):
+    if m.from_user.id != ADMIN_ID:
+        return
     try:
-        if data == "back_main":
-            bot.edit_message_text("Менюи асосӣ:", c.message.chat.id, c.message.message_id, reply_markup=None)
+        parts = m.text.split(",")
+        name = parts[0].strip()
+        price = int(parts[1].strip())
+        cat = parts[2].strip() if len(parts) > 2 else "non"
+        new_id = max([p["id"] for p in PRODUCTS]) + 1 if PRODUCTS else 1
+        add_product(new_id, name, price, price, cat, "Моли нав", "🛍", 100)
+        bot.send_message(m.chat.id, f"✅ Мол илова шуд: {name} - {price} с", reply_markup=admin_menu())
+    except Exception as e:
+        bot.send_message(m.chat.id, f"❌ Хатогӣ: {e}\nФормат: Ном, Нарх, Категория", reply_markup=admin_menu())
+        @bot.callback_query_handler(func=lambda c: True)
+def callback_handler(c):
+    try:
+        uid = c.from_user.id
+        save_user(c.from_user)
+        data = c.data
+        if data == "home":
+            bot.edit_message_text("🏠 Менюи асосӣ", c.message.chat.id, c.message.message_id)
             bot.send_message(c.message.chat.id, "Интихоб кунед:", reply_markup=main_menu())
-        elif data == "back_cats":
-            bot.edit_message_text("Категорияро интихоб кунед:", c.message.chat.id, c.message.message_id, reply_markup=cats_menu())
+        elif data == "shop":
+            bot.edit_message_text("🛍 Категорияро интихоб кунед:", c.message.chat.id, c.message.message_id, reply_markup=categories_keyboard())
         elif data.startswith("cat_"):
-            cat = data[4:]
-            bot.edit_message_text(f"Категория: {cat}\nМолро интихоб кунед:", c.message.chat.id, c.message.message_id, reply_markup=products_menu(cat))
+            cat_id = data[4:]
+            cat = get_category(cat_id)
+            if cat:
+                bot.edit_message_text(f"{cat['name']}\n\nМолро интихоб кунед:", c.message.chat.id, c.message.message_id, reply_markup=products_keyboard(cat_id))
+            else:
+                bot.answer_callback_query(c.id, "Категория ёфт нашуд!")
         elif data.startswith("prod_"):
             pid = int(data[5:])
-            p = PRODUCTS[pid]
-            txt = f"🛍 {p['name']}\n\n"
-            txt += f"📂 Категория: {p['cat']}\n"
-            txt += f"💰 Нарх: {p['price']} сомонӣ\n"
-            txt += f"📦 Дар анбор: {p['stock']} дона\n\n"
-            txt += f"📝 {p['desc']}\n\n"
-            txt += "Барои харидорӣ Ба сабад-ро пахш кунед!"
-            bot.edit_message_text(txt, c.message.chat.id, c.message.message_id, reply_markup=product_menu(pid))
+            p = get_product(pid)
+            if p:
+                bot.edit_message_text(format_product(p), c.message.chat.id, c.message.message_id, reply_markup=product_keyboard(pid))
+            else:
+                bot.answer_callback_query(c.id, "Мол ёфт нашуд!")
         elif data.startswith("add_"):
             pid = int(data[4:])
             cart = get_cart(uid)
             cart[pid] = cart.get(pid, 0) + 1
-            bot.answer_callback_query(c.id, f"{PRODUCTS[pid]['name']} ба сабад илова шуд! ✅")
-            bot.send_message(c.message.chat.id, f"✅ {PRODUCTS[pid]['name']} ба сабад илова шуд!\nСабад: {cart_total(uid)} сомонӣ")
+            p = get_product(pid)
+            bot.answer_callback_query(c.id, "1 дона илова шуд! ✅")
+            bot.send_message(c.message.chat.id, f"✅ {p['name'] if p else 'Мол'} илова шуд!\nСабад: {cart_total(uid)} {CURRENCY}")
         elif data.startswith("add2_"):
-    pid = int(data[5:])
-    cart = get_cart(uid)
-    cart[pid] = cart.get(pid, 0) + 2
-    bot.answer_callback_query(c.id, "2 дона илова шуд! ✅")
-    bot.send_message(c.message.chat.id, f"✅ 2 дона илова шуд!\nСабад: {cart_total(uid)} сомонӣ")
-elif data == "clear_cart":
-    CARTS[uid] = {}
-    bot.edit_message_text("Сабад тоза шуд! 🗑", c.message.chat.id, c.message.message_id)
-elif data == "checkout":
-    if not get_cart(uid):
-        bot.answer_callback_query(c.id, "Сабад холӣ аст!")
-        return
-    bot.send_message(c.message.chat.id, "📝 Номи худро нависед:")
-    bot.register_next_step_handler(c.message, get_name)
-elif data == "admin_stats":
-    txt = f"📊 Статистика:\n\nИстифодабарандагон: {len(USERS)}\nФармоишҳо: {len(ORDERS)}\nМолҳо: {len(PRODUCTS)}"
-    bot.send_message(c.message.chat.id, txt)
-elif data == "admin_orders":
-    if not ORDERS:
-        bot.send_message(c.message.chat.id, "Фармоиш нест")
-    else:
-        txt = "📦 Фармоишҳо:\n\n"
-        for o in ORDERS[-10:]:
-            txt += f"#{o['id']} - {o['total']} с - {o['name']}\n"
-        bot.send_message(c.message.chat.id, txt)
-elif data == "admin_users":
-    bot.send_message(c.message.chat.id, f"👥 {len(USERS)} корбар")
-elif data == "admin_broadcast":
-    bot.send_message(c.message.chat.id, "Матни паёми оммавиро нависед:")
-    bot.register_next_step_handler(c.message, do_broadcast)
-elif data == "admin_add":
-    bot.send_message(c.message.chat.id, "Барои иловаи мол ба админ нависед")
+            pid = int(data[5:])
+            cart = get_cart(uid)
+            cart[pid] = cart.get(pid, 0) + 2
+            bot.answer_callback_query(c.id, "2 дона илова шуд! ✅")
+            bot.send_message(c.message.chat.id, f"✅ 2 дона илова шуд!\nСабад: {cart_total(uid)} {CURRENCY}")
+        elif data.startswith("add5_"):
+            pid = int(data[5:])
+            cart = get_cart(uid)
+            cart[pid] = cart.get(pid, 0) + 5
+            bot.answer_callback_query(c.id, "5 дона илова шуд! ✅")
+            bot.send_message(c.message.chat.id, f"✅ 5 дона илова шуд!\nСабад: {cart_total(uid)} {CURRENCY}")
+        elif data == "view_cart":
+            bot.send_message(c.message.chat.id, cart_text(uid), reply_markup=cart_keyboard())
+        elif data == "clear_cart":
+            CARTS[uid] = {}
+            bot.edit_message_text("Сабад тоза шуд! 🗑", c.message.chat.id, c.message.message_id)
+            bot.send_message(c.message.chat.id, "Сабад тоза шуд!", reply_markup=main_menu())
+        elif data == "checkout":
+            if not get_cart(uid):
+                bot.answer_callback_query(c.id, "Сабад холӣ аст!")
+                return
+            bot.send_message(c.message.chat.id, "📝 Номи худро нависед:")
+            bot.register_next_step_handler(c.message, get_name)
+        elif data == "confirm_order":
+            bot.send_message(c.message.chat.id, "Фармоиш тасдиқ шуд!")
+        elif data == "cancel_order":
+            bot.send_message(c.message.chat.id, "Фармоиш бекор шуд!")
+        elif data == "admin_stats":
+            txt = f"📊 Статистика:\n\nИстифодабарандагон: {len(USERS)}\nФармоишҳо: {len(ORDERS)}\nМолҳо: {len(PRODUCTS)}"
+            bot.send_message(c.message.chat.id, txt)
+        elif data == "admin_orders":
+            if not ORDERS:
+                bot.send_message(c.message.chat.id, "Фармоиш нест")
+            else:
+                txt = "📦 Фармоишҳо:\n\n"
+                for o in ORDERS[-10:]:
+                    txt += f"#{o['id']} - {o['total']} с - {o['name']}\n"
+                bot.send_message(c.message.chat.id, txt)
+        elif data == "admin_users":
+            bot.send_message(c.message.chat.id, f"👥 {len(USERS)} корбар")
+        elif data == "admin_broadcast":
+            bot.send_message(c.message.chat.id, "Матни паёми оммавиро нависед:")
+            bot.register_next_step_handler(c.message, do_broadcast)
+        elif data == "admin_add":
+            bot.send_message(c.message.chat.id, "Барои иловаи мол ба админ нависед")
+        else:
+            bot.answer_callback_query(c.id, "Номаълум")
     except Exception as e:
         print("Callback error:", e)
-
+        try:
+            bot.answer_callback_query(c.id, "Хатогӣ рӯй дод!")
+        except Exception:
+            pass
+            
 def get_name(m):
-    USERS[m.from_user.id]["order_name"] = m.text
-    bot.send_message(m.chat.id, "📞 Рақами телефони худро нависед:")
+    save_user(m.from_user)
+    uid = m.from_user.id
+    USERS[uid]["order_name"] = m.text
+    USERS[uid]["name"] = m.text
+    bot.send_message(m.chat.id, "📝 Номи худро нависед:\nМисол: Али")
+    bot.send_message(m.chat.id, "📞 Рақами телефони худро нависед:\nМисол: +992 900 12 34 56")
     bot.register_next_step_handler(m, get_phone)
 
 def get_phone(m):
-    USERS[m.from_user.id]["order_phone"] = m.text
-    bot.send_message(m.chat.id, "📍 Сурогаи худро нависед:")
+    save_user(m.from_user)
+    uid = m.from_user.id
+    USERS[uid]["order_phone"] = m.text
+    USERS[uid]["phone"] = m.text
+    bot.send_message(m.chat.id, "📍 Сурогаи худро нависед:\nМисол: Dushanbe, k. Rudaki 123, kv 45")
     bot.register_next_step_handler(m, get_address)
 
 def get_address(m):
+    save_user(m.from_user)
     uid = m.from_user.id
-    total = cart_total(uid) + 20
-    order_id = len(ORDERS) + 1
-    order = {"id": order_id, "user": uid, "name": USERS[uid].get("order_name", ""), "phone": USERS[uid].get("order_phone", ""), "address": m.text, "items": dict(get_cart(uid)), "total": total, "status": "Нав", "date": str(datetime.datetime.now())[:16]}
-    ORDERS.append(order)
-    CARTS[uid] = {}
-    bot.send_message(m.chat.id, f"✅ Фармоиш қабул шуд! №: {order_id}\n💰 Ҷамъ: {total} сомонӣ", reply_markup=main_menu())
-    try:
-        bot.send_message(ADMIN_ID, f"🆕 Фармоиши нав #{order_id}!\n{order['name']} - {order['phone']}\n{total} сомонӣ")
-    except:
-        pass
+    USERS[uid]["order_address"] = m.text
+    USERS[uid]["address"] = m.text
+    subtotal = cart_total(uid)
+    delivery = 0
+    if subtotal < FREE_DELIVERY_FROM:
+        delivery = DELIVERY_PRICE
+    total = subtotal + delivery
+    txt = "📋 Фармоиши шумо:\n\n"
+    txt += cart_text(uid) + "\n\n"
+    txt += f"👤 Ном: {USERS[uid].get('order_name', '')}\n"
+    txt += f"📞 Телефон: {USERS[uid].get('order_phone', '')}\n"
+    txt += f"📍 Сурога: {m.text}\n\n"
+    txt += "Тасдиқ мекунед?"
+    kb = types.InlineKeyboardMarkup(row_width=2)
+    kb.add(
+        types.InlineKeyboardButton("✅ Ҳа, тасдиқ", callback_data="final_confirm"),
+        types.InlineKeyboardButton("❌ Не", callback_data="final_cancel"),
+    )
+    bot.send_message(m.chat.id, txt, reply_markup=kb)
 
-def do_broadcast(m):
-    count = 0
-    for uid in list(USERS.keys()):
+@bot.callback_query_handler(func=lambda c: c.data in ["final_confirm", "final_cancel"])
+def final_handler(c):
+    try:
+        uid = c.from_user.id
+        if c.data == "final_cancel":
+            bot.send_message(c.message.chat.id, "Фармоиш бекор шуд! ❌", reply_markup=main_menu())
+            return
+        if not get_cart(uid):
+            bot.send_message(c.message.chat.id, "Сабад холӣ аст!")
+            return
+        subtotal = cart_total(uid)
+        delivery = 0
+        if subtotal < FREE_DELIVERY_FROM:
+            delivery = DELIVERY_PRICE
+        total = subtotal + delivery
+        order_id = len(ORDERS) + 1
+        order = {
+            "id": order_id,
+            "user": uid,
+            "name": USERS[uid].get("order_name", ""),
+            "phone": USERS[uid].get("order_phone", ""),
+            "address": USERS[uid].get("order_address", ""),
+            "items": dict(get_cart(uid)),
+            "total": total,
+            "subtotal": subtotal,
+            "delivery": delivery,
+            "status": "Нав",
+            "date": str(datetime.datetime.now())[:16],
+        }
+        ORDERS.append(order)
+        USERS[uid]["orders"] = USERS[uid].get("orders", 0) + 1
+        USERS[uid]["total_spent"] = USERS[uid].get("total_spent", 0) + total
+        CARTS[uid] = {}
+        bot.send_message(c.message.chat.id, f"✅ Фармоиш қабул шуд!\n\n📦 №: {order_id}\n💰 Ҷамъ: {total} {CURRENCY}\n\nМо ба зудӣ бо шумо тамос мегирем!\n📞 {ADMIN_PHONE}", reply_markup=main_menu())
         try:
-            bot.send_message(uid, f"📢 Эълон:\n\n{m.text}")
-            count += 1
-        except:
+            admin_txt = f"🆕 Фармоиши нав #{order_id}!\n\n"
+            admin_txt += f"👤 {order['name']}\n"
+            admin_txt += f"📞 {order['phone']}\n"
+            admin_txt += f"📍 {order['address']}\n"
+            admin_txt += f"💰 {total} {CURRENCY}\n"
+            admin_txt += f"📅 {order['date']}"
+            bot.send_message(ADMIN_ID, admin_txt)
+        except Exception:
             pass
-    bot.send_message(m.chat.id, f"Паём ба {count} нафар фиристода шуд!")
+    except Exception as e:
+        print("Final error:", e)
 
 @bot.message_handler(func=lambda m: True)
 def any_text(m):
     save_user(m.from_user)
-    bot.send_message(m.chat.id, "Барои оғоз /start -ро пахш кунед", reply_markup=main_menu())
+    txt = m.text or ""
+    if txt.startswith("/"):
+        bot.send_message(m.chat.id, "Фармони номаълум! /start -ро пахш кунед", reply_markup=main_menu())
+        return
+    bot.send_message(m.chat.id, "Барои оғоз /start -ро пахш кунед ё тугмаи 🛍 Мағоза-ро интихоб кунед", reply_markup=main_menu())
 
-print("Bot started... Magozai Tojik")
-bot.infinity_polling()
+if __name__ == "__main__":
+    print("=" * 50)
+    print(f"Bot started... {SHOP_NAME} v{BOT_VERSION}")
+    print(f"Admin phone: {ADMIN_PHONE}")
+    print(f"Products: {len(PRODUCTS)}")
+    print(f"Categories: {len(CATEGORIES)}")
+    print("=" * 50)
+    while True:
+        try:
+            bot.infinity_polling(timeout=60, long_polling_timeout=60)
+        except Exception as e:
+            print("Polling error:", e)
+            print("Restart in 5 sec...")
+            time.sleep(5)
