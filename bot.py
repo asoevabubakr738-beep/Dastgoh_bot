@@ -12,7 +12,7 @@ from telebot import types
 
 # ---------------- 1. ТАНЗИМОТ ----------------
 TOKEN = os.environ.get("BOT_TOKEN")
-ADMIN_ID = 123456789  # <-- ID-и худро дар ин ҷо навиш
+ADMIN_ID = 8975989959  # <-- ID-и худро дар ин ҷо навиш
 bot = telebot.TeleBot(TOKEN)
 
 app = Flask(__name__)
