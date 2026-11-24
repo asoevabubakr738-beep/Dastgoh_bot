@@ -370,7 +370,7 @@ def orders_keyboard():
 # ============================================================
 # 8. /START - SARSHAVI
 # ============================================================
-@bot.message_handler(commands=["start"])
+bot.message_handler(commands=["start"])
 def start_cmd(m):
     save_user(m.from_user)
     uid = m.from_user.id
@@ -391,7 +391,7 @@ def start_cmd(m):
     else:
         bot.send_message(m.chat.id, txt, reply_markup=main_menu())
 
-@bot.message_handler(commands=["help"])
+bot.message_handler(commands=["help"])
 def help_cmd(m):
     save_user(m.from_user)
     txt = "🆘 Ёрӣ:\n\n"
@@ -404,12 +404,12 @@ def help_cmd(m):
     txt += f"📍 {SHOP_ADDRESS}"
     bot.send_message(m.chat.id, txt, reply_markup=main_menu())
 
-@bot.message_handler(commands=["shop"])
+bot.message_handler(commands=["shop"])
 def shop_cmd(m):
     save_user(m.from_user)
     bot.send_message(m.chat.id, "🛍 Категорияро интихоб кунед:", reply_markup=categories_keyboard())
 
-@bot.message_handler(commands=["cart"])
+bot.message_handler(commands=["cart"])
 def cart_cmd(m):
     save_user(m.from_user)
    @bot.message_handler(func=lambda m: m.text == "📦 Фармоишҳои ман")
@@ -424,7 +424,7 @@ def my_orders_btn(m):
     for o in my_orders[-10:]:
         txt += format_order(o) + "\n---\n"
     bot.send_message(m.chat.id, txt, reply_markup=main_menu()) 
-@bot.message_handler(commands=["admin"])
+bot.message_handler(commands=["admin"])
 def admin_cmd(m):
     if m.from_user.id != ADMIN_ID:
         bot.send_message(m.chat.id, "Шумо админ нестед! ❌")
@@ -435,18 +435,18 @@ def admin_cmd(m):
     txt += f"🛍 Молҳо: {len(PRODUCTS)}\n"
     bot.send_message(m.chat.id, txt, reply_markup=admin_menu())
 
-@bot.message_handler(func=lambda m: m.text == "🛍 Мағоза")
+bot.message_handler(func=lambda m: m.text == "🛍 Мағоза")
 def shop_btn(m):
     save_user(m.from_user)
     bot.send_message(m.chat.id, "🛍 Категорияро интихоб кунед:", reply_markup=categories_keyboard())
 
-@bot.message_handler(func=lambda m: m.text == "🛒 Сабад")
+bot.message_handler(func=lambda m: m.text == "🛒 Сабад")
 def cart_btn(m):
     save_user(m.from_user)
     uid = m.from_user.id
     bot.send_message(m.chat.id, cart_text(uid), reply_markup=cart_keyboard())
 
-@bot.message_handler(func=lambda m: m.text == "🔍 Ҷустуҷӯ")
+bot.message_handler(func=lambda m: m.text == "🔍 Ҷустуҷӯ")
 def search_btn(m):
     save_user(m.from_user)
     bot.send_message(m.chat.id, "🔍 Номи молро нависед:\nМисол: нон, шир, себ")
@@ -470,7 +470,7 @@ def do_search(m):
     kb.add(types.InlineKeyboardButton("🛍 Мағоза", callback_data="shop"))
     bot.send_message(m.chat.id, txt, reply_markup=kb)
 
-@bot.message_handler(func=lambda m: m.text == "📦 Фармоишҳои ман")
+bot.message_handler(func=lambda m: m.text == "📦 Фармоишҳои ман")
 def my_orders_btn(m):
     save_user(m.from_user)
     uid = m.from_user.id
@@ -483,7 +483,7 @@ def my_orders_btn(m):
         txt += format_order(o) + "\n---\n"
     bot.send_message(m.chat.id, txt, reply_markup=main_menu())
 
-@bot.message_handler(func=lambda m: m.text == "⭐ Бестселлерҳо")
+bot.message_handler(func=lambda m: m.text == "⭐ Бестселлерҳо")
 def bestsellers_btn(m):
     save_user(m.from_user)
     sorted_products = sorted(PRODUCTS, key=lambda x: x["sold"], reverse=True)[:10]
@@ -495,7 +495,7 @@ def bestsellers_btn(m):
     kb.add(types.InlineKeyboardButton("🛍 Мағоза", callback_data="shop"))
     bot.send_message(m.chat.id, txt, reply_markup=kb)
 
-@bot.message_handler(func=lambda m: m.text == "🔥 Тахфифҳо")
+bot.message_handler(func=lambda m: m.text == "🔥 Тахфифҳо")
 def discounts_btn(m):
     save_user(m.from_user)
     discounted = [p for p in PRODUCTS if p["old_price"] > p["price"]]
@@ -508,7 +508,7 @@ def discounts_btn(m):
         kb.add(types.InlineKeyboardButton(f"{p['emoji']} {p['name']} - {p['price']} с", callback_data=f"prod_{p['id']}"))
     kb.add(types.InlineKeyboardButton("🛍 Мағоза", callback_data="shop"))
     bot.send_message(m.chat.id, txt, reply_markup=kb)
-@bot.message_handler(func=lambda m: m.text == "ℹ️ Дар бораи мо")
+bot.message_handler(func=lambda m: m.text == "ℹ️ Дар бораи мо")
 def about_btn(m):
     save_user(m.from_user)
     txt = f"ℹ️ Дар бораи {SHOP_NAME}:\n\n"
@@ -524,7 +524,7 @@ def about_btn(m):
     txt += f"Доставкаи ройгон аз {FREE_DELIVERY_FROM} сомонӣ!"
     bot.send_message(m.chat.id, txt, reply_markup=main_menu())
 
-@bot.message_handler(func=lambda m: m.text == "📞 Тамос")
+bot.message_handler(func=lambda m: m.text == "📞 Тамос")
 def contact_btn(m):
     save_user(m.from_user)
     txt = "📞 Тамос:\n\n"
@@ -535,7 +535,7 @@ def contact_btn(m):
     txt += "Барои саволҳо занг занед ё дар ин ҷо нависед!"
     bot.send_message(m.chat.id, txt, reply_markup=main_menu())
 
-@bot.message_handler(func=lambda m: m.text == "👤 Профили ман")
+bot.message_handler(func=lambda m: m.text == "👤 Профили ман")
 def profile_btn(m):
     save_user(m.from_user)
     uid = m.from_user.id
@@ -553,7 +553,7 @@ def profile_btn(m):
         txt += "\n👑 Шумо АДМИН ҳастед!"
     bot.send_message(m.chat.id, txt, reply_markup=main_menu())
 
-@bot.message_handler(func=lambda m: m.text == "📊 Статистика")
+bot.message_handler(func=lambda m: m.text == "📊 Статистика")
 def stats_btn(m):
     if m.from_user.id != ADMIN_ID:
         return
@@ -569,7 +569,7 @@ def stats_btn(m):
         txt += f"#{o['id']} - {o['total']} с - {o['name']}\n"
     bot.send_message(m.chat.id, txt, reply_markup=admin_menu())
 
-@bot.message_handler(func=lambda m: m.text == "📦 Ҳамаи фармоишҳо")
+bot.message_handler(func=lambda m: m.text == "📦 Ҳамаи фармоишҳо")
 def all_orders_btn(m):
     if m.from_user.id != ADMIN_ID:
         return
@@ -581,7 +581,7 @@ def all_orders_btn(m):
         txt += format_order(o) + "\n---\n"
     bot.send_message(m.chat.id, txt, reply_markup=admin_menu())
 
-@bot.message_handler(func=lambda m: m.text == "👥 Корбарон")
+bot.message_handler(func=lambda m: m.text == "👥 Корбарон")
 def users_btn(m):
     if m.from_user.id != ADMIN_ID:
         return
@@ -590,7 +590,7 @@ def users_btn(m):
         txt += f"{u['name']} - {uid} - {u.get('phone', '-')}\n"
     bot.send_message(m.chat.id, txt, reply_markup=admin_menu())
 
-@bot.message_handler(func=lambda m: m.text == "📢 Паёми оммавӣ")
+bot.message_handler(func=lambda m: m.text == "📢 Паёми оммавӣ")
 def broadcast_btn(m):
     if m.from_user.id != ADMIN_ID:
         return
@@ -610,7 +610,7 @@ def do_broadcast(m):
             failed += 1
     bot.send_message(m.chat.id, f"✅ Паём ба {count} нафар фиристода шуд!\n❌ Хатогӣ: {failed}", reply_markup=admin_menu())
 
-@bot.message_handler(func=lambda m: m.text == "➕ Иловаи мол")
+bot.message_handler(func=lambda m: m.text == "➕ Иловаи мол")
 def add_product_btn(m):
     if m.from_user.id != ADMIN_ID:
         return
@@ -630,7 +630,7 @@ def do_add_product_step1(m):
         bot.send_message(m.chat.id, f"✅ Мол илова шуд: {name} - {price} с", reply_markup=admin_menu())
     except Exception as e:
         bot.send_message(m.chat.id, f"❌ Хатогӣ: {e}\nФормат: Ном, Нарх, Категория", reply_markup=admin_menu())
-        @bot.callback_query_handler(func=lambda c: True)
+        bot.callback_query_handler(func=lambda c: True)
 def callback_handler(c):
     try:
         uid = c.from_user.id
@@ -804,7 +804,7 @@ def final_handler(c):
     except Exception as e:
         print("Final error:", e)
 
-@bot.message_handler(func=lambda m: True)
+bot.message_handler(func=lambda m: True)
 def any_text(m):
     save_user(m.from_user)
     txt = m.text or ""
