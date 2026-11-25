@@ -27,7 +27,7 @@ threading.Thread(target=run_web, daemon=True).start()
 # ============================================================
 # 1. TANZIMOT - IN JO RO IVAZ KUN
 # ============================================================
-TOKEN = os.environ.get("BOT_TOKEN , 9095771023:AAFQPwJ-Ndcm9mCXrTDcHsokQJYYbCdJEEM")
+TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 8410101111
 ADMIN_PHONE = "+992 783 82 90 09"
 ADMIN_NAME = "Admin Magozai Tojik"
